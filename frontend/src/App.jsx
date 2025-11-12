@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import { AnimatePresence } from 'framer-motion';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { ToastProvider } from './context/ToastContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import LandingPage from './pages/LandingPage';
@@ -20,6 +21,7 @@ import CourseCreate from './pages/instructor/CourseCreate';
 import CourseAnalytics from './pages/instructor/CourseAnalytics';
 import CoursesRoutes from './pages/courses';
 import CourseLearning from './pages/courses/CourseLearning';
+import InteractiveCoursePlayer from './pages/courses/InteractiveCoursePlayer';
 import UserProfile from './pages/profile/UserProfile';
 import './App.css';
 import './styles/theme-global.css';
@@ -43,6 +45,13 @@ const AnimatedRoutes = () => {
         
         {/* Course Learning - Student Access */}
         <Route path="/learn/:courseId" element={
+          <ProtectedRoute allowedRoles={['student']}>
+            <InteractiveCoursePlayer />
+          </ProtectedRoute>
+        } />
+        
+        {/* Legacy Course Learning Route */}
+        <Route path="/course/learn/:courseId" element={
           <ProtectedRoute allowedRoles={['student']}>
             <CourseLearning />
           </ProtectedRoute>
@@ -140,9 +149,11 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <Router>
-          <AppContent />
-        </Router>
+        <ToastProvider>
+          <Router>
+            <AppContent />
+          </Router>
+        </ToastProvider>
       </AuthProvider>
     </ThemeProvider>
   );

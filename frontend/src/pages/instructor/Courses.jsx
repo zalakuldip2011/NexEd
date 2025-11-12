@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
 import InstructorLayout from '../../components/instructor/InstructorLayout';
 import PublishToggle from '../../components/instructor/PublishToggle';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { motion } from 'framer-motion';
 import {
   PlusIcon,
@@ -25,6 +27,7 @@ import {
 
 const Courses = () => {
   const { isDarkMode } = useTheme();
+  const { success, error: showError } = useToast();
   const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +35,8 @@ const Courses = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'table'
+  const [deleteDialog, setDeleteDialog] = useState({ isOpen: false, course: null });
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchCourses();
@@ -140,6 +145,55 @@ const Courses = () => {
   const handleValidationError = (courseId, errors) => {
     console.log('Course validation failed:', courseId, errors);
     // Could show a toast notification here
+  };
+
+  // Open delete confirmation dialog
+  const openDeleteDialog = (course) => {
+    setDeleteDialog({ isOpen: true, course });
+  };
+
+  // Close delete confirmation dialog
+  const closeDeleteDialog = () => {
+    setDeleteDialog({ isOpen: false, course: null });
+  };
+
+  // Handle course deletion
+  const handleDeleteCourse = async () => {
+    if (!deleteDialog.course) return;
+
+    setDeleting(true);
+    try {
+      console.log('🗑️ Deleting course:', deleteDialog.course._id);
+      
+      const response = await fetch(`http://localhost:5000/api/courses/instructor/${deleteDialog.course._id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      const data = await response.json();
+      console.log('Delete response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete course');
+      }
+
+      // Show success toast
+      success('Course deleted successfully!');
+
+      // Remove course from state
+      setCourses(prevCourses => prevCourses.filter(c => c._id !== deleteDialog.course._id));
+
+      // Close dialog
+      closeDeleteDialog();
+    } catch (err) {
+      console.error('❌ Error deleting course:', err);
+      showError(err.message || 'Failed to delete course. Please try again.');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const filteredCourses = courses.filter(course => {
@@ -545,7 +599,7 @@ const Courses = () => {
                       
                       <button
                         onClick={() => navigate(`/courses/${course._id}`)}
-                        className="p-2 rounded-lg transition-colors text-purple-600 hover:bg-purple-50"
+                        className="p-2 rounded-lg transition-colors text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/20"
                         title="View"
                       >
                         <EyeIcon className="h-4 w-4" />
@@ -554,12 +608,20 @@ const Courses = () => {
                       {course.status === 'published' && (
                         <button
                           onClick={() => navigate(`/instructor/courses/${course._id}/analytics`)}
-                          className="p-2 rounded-lg transition-colors text-indigo-600 hover:bg-indigo-50"
+                          className="p-2 rounded-lg transition-colors text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
                           title="Analytics"
                         >
                           <ChartBarIcon className="h-4 w-4" />
                         </button>
                       )}
+
+                      <button
+                        onClick={() => openDeleteDialog(course)}
+                        className="p-2 rounded-lg transition-colors text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        title="Delete"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
                 </motion.div>
@@ -716,18 +778,13 @@ const Courses = () => {
                             <ChartBarIcon className="h-4 w-4" />
                           </button>
                           <button 
+                            onClick={() => openDeleteDialog(course)}
                             className={`p-2 transition-colors ${
                               isDarkMode
                                 ? 'text-slate-400 hover:text-red-400'
                                 : 'text-gray-400 hover:text-red-600'
                             }`}
                             title="Delete Course"
-                            onClick={() => {
-                              if (window.confirm('Are you sure you want to delete this course?')) {
-                                // TODO: Implement delete functionality
-                                console.log('Delete course:', course._id);
-                              }
-                            }}
                           >
                             <TrashIcon className="h-4 w-4" />
                           </button>
@@ -741,6 +798,20 @@ const Courses = () => {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={closeDeleteDialog}
+        onConfirm={handleDeleteCourse}
+        loading={deleting}
+        title="Delete Course?"
+        message={`Are you sure you want to delete "${deleteDialog.course?.title}"? This action cannot be undone and will permanently remove all course content, enrollments, and data.`}
+        confirmText="Delete Course"
+        cancelText="Cancel"
+        confirmButtonClass="bg-red-600 hover:bg-red-700"
+        icon="danger"
+      />
     </InstructorLayout>
   );
 };
