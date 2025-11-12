@@ -13,7 +13,7 @@ const Team = () => {
     {
       name: 'Zala Kuldip',
       role: 'Founder & Lead Developer',
-      image: 'K:\Kuldip\photos\WhatsApp Image 2025-11-13 at 02.06.56_d4d61d5c',
+      image: '/images/team/kuldip.jpg',
       bio: 'Full-stack developer passionate about creating accessible educational platforms. Specialized in React, Node.js, and modern web technologies.',
       email: 'kuldipzala20112005@gmail.com',
       linkedin: 'https://www.linkedin.com/in/kuldip-zala-077bb828a/',
