@@ -333,7 +333,7 @@ reviewSchema.methods.moderate = function(moderatorId, newStatus, notes = '') {
 /**
  * Remove review
  */
-reviewSchema.methods.remove = function(reason = '') {
+reviewSchema.methods.removeReview = function(reason = '') {
   this.status = 'removed';
   this.moderation.moderationNotes = reason;
   this.moderation.moderatedAt = new Date();

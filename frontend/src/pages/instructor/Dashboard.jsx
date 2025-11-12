@@ -136,19 +136,19 @@ const InstructorDashboard = () => {
     {
       title: "Create an Engaging Course",
       description: "Learn how to create courses that students love",
-      image: "/api/placeholder/80/60",
+      image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=80&h=60&fit=crop",
       link: "/instructor/resources"
     },
     {
       title: "Build Your Audience",
       description: "Tips to market and grow your student base",
-      image: "/api/placeholder/80/60",
+      image: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=80&h=60&fit=crop",
       link: "/instructor/resources"
     },
     {
       title: "Get Started with Video",
       description: "Best practices for recording quality videos",
-      image: "/api/placeholder/80/60",
+      image: "https://images.unsplash.com/photo-1492619375914-88005aa9e8fb?w=80&h=60&fit=crop",
       link: "/instructor/resources"
     }
   ];

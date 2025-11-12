@@ -512,7 +512,13 @@ userSchema.methods.toJSON = function() {
   const userObject = this.toObject();
   delete userObject.password;
   delete userObject.security;
-  delete userObject.verification.emailVerificationToken;
+  
+  // Safely delete sensitive verification fields
+  if (userObject.verification && typeof userObject.verification === 'object') {
+    delete userObject.verification.emailVerificationToken;
+    delete userObject.verification.emailOTP;
+  }
+  
   return userObject;
 };
 

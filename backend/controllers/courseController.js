@@ -221,36 +221,47 @@ const getInstructorCourses = async (req, res) => {
     console.log('User ID:', req.user?._id);
     console.log('User:', req.user);
     
-    // First, let's check if there are ANY courses in the database
-    const allCourses = await Course.find({}).select('title instructor');
-    console.log('Total courses in database:', allCourses.length);
-    console.log('All courses:', allCourses.map(c => ({ 
-      title: c.title, 
-      instructor: c.instructor?.toString() 
-    })));
+    // Validate user exists
+    if (!req.user || !req.user._id) {
+      console.error('❌ No user found in request');
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required. Please log in.',
+        error: 'User not authenticated'
+      });
+    }
     
-    // Now find courses for this instructor
+    // First, let's check if there are ANY courses in the database (for debugging)
+    const allCoursesCount = await Course.countDocuments({});
+    console.log('Total courses in database:', allCoursesCount);
+    
+    // Now find courses for this instructor with better error handling
     const courses = await Course.find({ instructor: req.user._id })
       .populate('instructor', 'name email profilePicture')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean(); // Use lean() for better performance
 
     console.log('Courses found for instructor:', courses.length);
-    console.log('Courses:', courses.map(c => ({ 
-      title: c.title, 
-      status: c.status,
-      instructor: c.instructor?._id?.toString()
-    })));
+    if (courses.length > 0) {
+      console.log('Sample course:', { 
+        title: courses[0].title, 
+        status: courses[0].status,
+        instructor: courses[0].instructor?._id?.toString()
+      });
+    }
 
     res.json({
       success: true,
-      data: courses
+      data: courses,
+      count: courses.length
     });
   } catch (error) {
-    console.error('Error fetching instructor courses:', error);
+    console.error('💥 Error fetching instructor courses:', error);
+    console.error('Error stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Error fetching courses',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 };
@@ -316,6 +327,17 @@ const getCourseStats = async (req, res) => {
 const createCourse = async (req, res) => {
   try {
     console.log('=== CREATE COURSE START ===');
+    
+    // CRITICAL FIX: Validate req.body exists and is an object
+    if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+      console.error('❌ Invalid request body:', req.body);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid request body. Expected JSON object.',
+        error: 'Request body is null, undefined, or not an object'
+      });
+    }
+    
     console.log('Received course data:', JSON.stringify(req.body, null, 2));
     console.log('User:', req.user);
     
@@ -335,13 +357,14 @@ const createCourse = async (req, res) => {
     const allowedFields = [
       'title', 'subtitle', 'description', 'category', 'level', 'price',
       'language', 'learningOutcomes', 'requirements', 'prerequisites',
-      'targetAudience', 'tags', 'sections', 'status', 'thumbnail', 'featured'
+      'targetAudience', 'tags', 'sections', 'status', 'thumbnail', 'featured',
+      'promotionalPrice', 'discountPercentage', 'courseFeature' // Optional fields
     ];
     
-    // Filter out any fields not in our allowed list
+    // Filter out any fields not in our allowed list - SAFE because we validated req.body above
     const filteredBody = {};
     allowedFields.forEach(field => {
-      if (req.body && req.body.hasOwnProperty(field)) {
+      if (req.body.hasOwnProperty(field)) {
         filteredBody[field] = req.body[field];
       }
     });
@@ -414,8 +437,21 @@ const createCourse = async (req, res) => {
                     console.warn(`  Lecture ${idx}-${lIdx} is not an object, skipping`);
                     return null;
                   }
+                  
+                  // Safely handle videoData object
+                  const safeVideoData = lecture.videoData && typeof lecture.videoData === 'object'
+                    ? lecture.videoData
+                    : null;
+                  
                   return {
-                    ...lecture,
+                    title: lecture.title || '',
+                    description: lecture.description || '',
+                    type: lecture.type || 'video',
+                    videoUrl: lecture.videoUrl || '',
+                    videoData: safeVideoData,
+                    duration: parseFloat(lecture.duration) || 0,
+                    resources: Array.isArray(lecture.resources) ? lecture.resources : [],
+                    isPreview: Boolean(lecture.isPreview),
                     order: lecture.order || lIdx + 1
                   };
                 }).filter(l => l !== null)
@@ -450,6 +486,17 @@ const createCourse = async (req, res) => {
       status: status || 'draft',
       isPublished: status === 'published'
     };
+    
+    // Handle optional promotional/discount fields (they are allowed to be undefined/skipped)
+    if (filteredBody.promotionalPrice !== undefined && filteredBody.promotionalPrice !== null) {
+      courseData.promotionalPrice = parseFloat(filteredBody.promotionalPrice) || 0;
+    }
+    if (filteredBody.discountPercentage !== undefined && filteredBody.discountPercentage !== null) {
+      courseData.discountPercentage = parseFloat(filteredBody.discountPercentage) || 0;
+    }
+    if (filteredBody.courseFeature !== undefined && filteredBody.courseFeature !== null) {
+      courseData.courseFeature = filteredBody.courseFeature;
+    }
 
     // Calculate total lectures and duration
     let totalLectures = 0;

@@ -340,7 +340,7 @@ exports.deleteReview = async (req, res) => {
       });
     }
 
-    await review.remove();
+    await review.deleteOne();
 
     res.json({
       success: true,

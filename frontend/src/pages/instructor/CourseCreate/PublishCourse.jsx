@@ -496,7 +496,22 @@ const PublishCourse = ({ data, updateData, onPrev, onSaveDraft, onPublish }) => 
                   <input
                     type="number"
                     value={publishSettings.price}
-                    onChange={(e) => updatePublishSettings('price', parseFloat(e.target.value) || 0)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Allow empty string (for clearing) or valid numbers
+                      if (value === '' || value === null) {
+                        updatePublishSettings('price', '');
+                      } else {
+                        const parsed = parseFloat(value);
+                        updatePublishSettings('price', isNaN(parsed) ? 0 : parsed);
+                      }
+                    }}
+                    onBlur={(e) => {
+                      // On blur, if empty, set to 0
+                      if (e.target.value === '' || e.target.value === null) {
+                        updatePublishSettings('price', 0);
+                      }
+                    }}
                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     placeholder="0.00"
                     min="0"

@@ -66,36 +66,35 @@ const StatsSection = () => {
     };
   }, [hasAnimated]);
 
-  // Counter animation hook
-  const useCounter = (end, duration = 2000, shouldAnimate) => {
-    const [count, setCount] = useState(0);
+  // Counter state for each stat (moved to top level)
+  const [counters, setCounters] = useState(stats.map(() => 0));
 
-    useEffect(() => {
-      if (!shouldAnimate) return;
+  // Counter animation effect
+  useEffect(() => {
+    if (!hasAnimated) return;
 
-      let startTime;
-      const startValue = 0;
-      const isDecimal = end % 1 !== 0;
+    const duration = 2000;
+    let startTime;
 
-      const animate = (currentTime) => {
-        if (!startTime) startTime = currentTime;
-        const progress = Math.min((currentTime - startTime) / duration, 1);
-        
-        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-        const currentValue = startValue + (end - startValue) * easeOutQuart;
-        
-        setCount(isDecimal ? currentValue.toFixed(1) : Math.floor(currentValue));
+    const animate = (currentTime) => {
+      if (!startTime) startTime = currentTime;
+      const progress = Math.min((currentTime - startTime) / duration, 1);
+      
+      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+      
+      setCounters(stats.map((stat) => {
+        const isDecimal = stat.value % 1 !== 0;
+        const currentValue = stat.value * easeOutQuart;
+        return isDecimal ? currentValue.toFixed(1) : Math.floor(currentValue);
+      }));
 
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        }
-      };
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
 
-      requestAnimationFrame(animate);
-    }, [end, duration, shouldAnimate]);
-
-    return count;
-  };
+    requestAnimationFrame(animate);
+  }, [hasAnimated]);
 
   return (
     <section 
@@ -114,36 +113,32 @@ const StatsSection = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-          {stats.map((stat, index) => {
-            const count = useCounter(stat.value, 2000, hasAnimated);
-            
-            return (
-              <div
-                key={index}
-                className="text-center group"
-                style={{
-                  animation: hasAnimated ? `slideInUp 0.6s ease-out ${index * 0.15}s both` : 'none'
-                }}
-              >
-                {/* Icon */}
-                <div className="flex justify-center mb-4">
-                  <div className={`p-4 rounded-2xl bg-gradient-to-br ${stat.color} transform group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
-                    <stat.icon className="h-8 w-8 text-white" />
-                  </div>
-                </div>
-
-                {/* Counter */}
-                <div className="text-5xl md:text-6xl font-bold text-white mb-2">
-                  {count}{stat.suffix}
-                </div>
-
-                {/* Label */}
-                <div className="text-lg text-gray-200 font-medium">
-                  {stat.label}
+          {stats.map((stat, index) => (
+            <div
+              key={index}
+              className="text-center group"
+              style={{
+                animation: hasAnimated ? `slideInUp 0.6s ease-out ${index * 0.15}s both` : 'none'
+              }}
+            >
+              {/* Icon */}
+              <div className="flex justify-center mb-4">
+                <div className={`p-4 rounded-2xl bg-gradient-to-br ${stat.color} transform group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+                  <stat.icon className="h-8 w-8 text-white" />
                 </div>
               </div>
-            );
-          })}
+
+              {/* Counter */}
+              <div className="text-5xl md:text-6xl font-bold text-white mb-2">
+                {counters[index]}{stat.suffix}
+              </div>
+
+              {/* Label */}
+              <div className="text-lg text-gray-200 font-medium">
+                {stat.label}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
