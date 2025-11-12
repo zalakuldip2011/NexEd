@@ -5,7 +5,9 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
+const path = require('path');
 const connectDB = require('./config/db');
+const { initAccountDeletionJob } = require('./jobs/accountDeletion');
 require('dotenv').config();
 
 const app = express();
@@ -46,6 +48,9 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 app.use(limiter);
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -96,4 +101,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📖 API Documentation: http://localhost:${PORT}`);
   console.log(`🔍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  
+  // Initialize cron jobs
+  initAccountDeletionJob();
 });

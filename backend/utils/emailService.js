@@ -83,6 +83,50 @@ class EmailService {
     }
   }
 
+  // Send password change OTP email
+  async sendPasswordChangeOTPEmail(email, username, otp) {
+    const mailOptions = {
+      from: {
+        name: 'Edemy Platform',
+        address: process.env.EMAIL_FROM || process.env.EMAIL_USER
+      },
+      to: email,
+      subject: 'Verify Password Change - Edemy Account',
+      html: this.getPasswordChangeOTPEmailTemplate(username, otp)
+    };
+
+    try {
+      const info = await this.transporter.sendMail(mailOptions);
+      console.log('Password change OTP email sent:', info.messageId);
+      return { success: true, messageId: info.messageId };
+    } catch (error) {
+      console.error('Error sending password change OTP email:', error);
+      throw new Error('Failed to send verification code');
+    }
+  }
+
+  // Send account deletion confirmation email
+  async sendAccountDeletionEmail(email, username, deletionDate, hasPublishedCourses) {
+    const mailOptions = {
+      from: {
+        name: 'Edemy Platform',
+        address: process.env.EMAIL_FROM || process.env.EMAIL_USER
+      },
+      to: email,
+      subject: 'Account Deletion Request - Edemy',
+      html: this.getAccountDeletionEmailTemplate(username, deletionDate, hasPublishedCourses)
+    };
+
+    try {
+      const info = await this.transporter.sendMail(mailOptions);
+      console.log('Account deletion email sent:', info.messageId);
+      return { success: true, messageId: info.messageId };
+    } catch (error) {
+      console.error('Error sending account deletion email:', error);
+      throw new Error('Failed to send account deletion confirmation email');
+    }
+  }
+
   // OTP email template
   getOTPEmailTemplate(username, otp) {
     return `
@@ -566,6 +610,242 @@ class EmailService {
             </div>
             <div class="footer-text">
               Need help? Contact us at support@edemy.com
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  // Password change OTP email template
+  getPasswordChangeOTPEmailTemplate(username, otp) {
+    return `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Verify Password Change</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: #e2e8f0; line-height: 1.6; }
+          .container { max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+          .header { background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); padding: 40px 30px; text-align: center; }
+          .logo { font-size: 32px; font-weight: bold; color: white; margin-bottom: 10px; }
+          .content { padding: 40px 30px; }
+          .greeting { font-size: 24px; font-weight: 600; margin-bottom: 20px; color: #f8fafc; }
+          .message { font-size: 16px; margin-bottom: 30px; color: #cbd5e1; }
+          .otp-container { background: rgba(245, 158, 11, 0.1); border: 2px solid #f59e0b; border-radius: 12px; padding: 30px; text-align: center; margin: 30px 0; }
+          .otp-code { font-size: 36px; font-weight: bold; color: #f59e0b; letter-spacing: 8px; font-family: 'Courier New', monospace; }
+          .footer { background: #1e293b; padding: 30px; text-align: center; border-top: 1px solid #334155; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">🔐 Edemy</div>
+          </div>
+          <div class="content">
+            <div class="greeting">Hello ${username}!</div>
+            <div class="message">You requested to change your password. Use this code to verify and continue:</div>
+            <div class="otp-container">
+              <div class="otp-code">${otp}</div>
+            </div>
+            <div class="message">This code expires in 10 minutes. If you didn't request this, please ignore this email.</div>
+          </div>
+          <div class="footer">
+            <div style="color: #64748b; font-size: 14px;">© ${new Date().getFullYear()} Edemy. All rights reserved.</div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  // Account deletion email template
+  getAccountDeletionEmailTemplate(username, deletionDate, hasPublishedCourses) {
+    const formattedDate = new Date(deletionDate).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    return `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Account Deletion Request</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: #e2e8f0; line-height: 1.6; }
+          .container { max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+          .header { background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding: 40px 30px; text-align: center; }
+          .logo { font-size: 32px; font-weight: bold; color: white; margin-bottom: 10px; }
+          .content { padding: 40px 30px; }
+          .warning-box { background: rgba(239, 68, 68, 0.1); border: 2px solid #ef4444; border-radius: 12px; padding: 25px; margin: 25px 0; }
+          .warning-title { color: #fca5a5; font-size: 18px; font-weight: bold; margin-bottom: 15px; }
+          .warning-text { color: #fca5a5; font-size: 14px; margin-bottom: 10px; }
+          .info-box { background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+          .date-highlight { color: #3b82f6; font-weight: bold; font-size: 18px; }
+          .cta-button { display: inline-block; background: #22c55e; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">⚠️ Account Deletion Request</div>
+          </div>
+          <div class="content">
+            <h2 style="color: #f8fafc; margin-bottom: 20px;">Hello ${username},</h2>
+            
+            <p style="color: #cbd5e1; font-size: 16px; margin-bottom: 25px;">
+              We've received your request to permanently delete your Edemy account. We're sorry to see you go!
+            </p>
+            
+            <div class="warning-box">
+              <div class="warning-title">⚠️ Important Information</div>
+              <div class="warning-text">
+                • Your account deletion is scheduled for: <strong>${formattedDate}</strong><br>
+                • You will be unsubscribed from all enrolled courses<br>
+                • All your progress and data will be permanently removed<br>
+                • This action cannot be undone after the grace period<br>
+                • You cannot create a new account with the same email
+              </div>
+            </div>
+            
+            ${hasPublishedCourses ? `
+            <div class="warning-box">
+              <div class="warning-title">📚 Instructor Information</div>
+              <div class="warning-text">
+                You are an instructor with published courses. Please note:<br>
+                • Courses with enrollments cannot be deleted (lifetime guarantee)<br>
+                • Your courses will be transferred to a generic Edemy instructor account<br>
+                • No new enrollments will be accepted after account closure<br>
+                • Enrolled learners will continue to have access to your courses
+              </div>
+            </div>
+            ` : ''}
+            
+            <div class="info-box">
+              <h3 style="color: #93c5fd; margin-bottom: 10px;">🕐 14-Day Grace Period</h3>
+              <p style="color: #cbd5e1;">
+                You have <strong>14 days</strong> to change your mind. To cancel this deletion request, 
+                please contact us at <strong>privacy@edemy.com</strong> before the scheduled deletion date.
+              </p>
+            </div>
+            
+            <p style="color: #cbd5e1; margin-top: 25px;">
+              If you didn't request this deletion or changed your mind, please contact our support team immediately.
+            </p>
+            
+            <div style="text-align: center; margin-top: 30px;">
+              <a href="mailto:privacy@edemy.com" class="cta-button">
+                Cancel Deletion Request
+              </a>
+            </div>
+          </div>
+          <div style="background: #1e293b; padding: 30px; text-align: center; border-top: 1px solid #334155;">
+            <div style="color: #64748b; font-size: 14px;">
+              For questions or concerns, contact us at privacy@edemy.com
+            </div>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
+  // Send final account deleted confirmation email
+  async sendAccountDeletedEmail(email, username) {
+    const mailOptions = {
+      from: {
+        name: 'Edemy Platform',
+        address: process.env.EMAIL_FROM || process.env.EMAIL_USER
+      },
+      to: email,
+      subject: 'Account Permanently Deleted - Edemy',
+      html: this.getAccountDeletedEmailTemplate(username)
+    };
+
+    try {
+      const info = await this.transporter.sendMail(mailOptions);
+      console.log('Account deleted confirmation email sent:', info.messageId);
+      return { success: true, messageId: info.messageId };
+    } catch (error) {
+      console.error('Error sending account deleted email:', error);
+      // Don't throw error as the account is already deleted
+      return { success: false, error: error.message };
+    }
+  }
+
+  // Account deleted confirmation email template
+  getAccountDeletedEmailTemplate(username) {
+    return `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Account Deleted</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0f172a; color: #e2e8f0; line-height: 1.6; }
+          .container { max-width: 600px; margin: 0 auto; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); border-radius: 16px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+          .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center; }
+          .checkmark { font-size: 48px; color: white; margin-bottom: 15px; }
+          .logo { font-size: 28px; font-weight: bold; color: white; }
+          .content { padding: 40px 30px; }
+          .info-box { background: rgba(16, 185, 129, 0.1); border-left: 4px solid #10b981; padding: 20px; margin: 20px 0; border-radius: 0 8px 8px 0; }
+          .info-title { color: #6ee7b7; font-size: 18px; font-weight: bold; margin-bottom: 15px; }
+          .info-text { color: #cbd5e1; font-size: 14px; line-height: 1.8; }
+          .message { font-size: 16px; margin-bottom: 25px; color: #cbd5e1; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="checkmark">✓</div>
+            <div class="logo">Account Successfully Deleted</div>
+          </div>
+          <div class="content">
+            <p class="message">Hello <strong>${username}</strong>,</p>
+            
+            <p class="message">
+              This email confirms that your Edemy account has been permanently deleted as requested.
+            </p>
+            
+            <div class="info-box">
+              <div class="info-title">What's Been Removed:</div>
+              <div class="info-text">
+                ✓ Your profile information and personal data<br>
+                ✓ Course enrollments and learning progress<br>
+                ✓ Reviews, ratings, and comments<br>
+                ✓ Saved preferences and settings<br>
+                ✓ All associated account data
+              </div>
+            </div>
+            
+            <p class="message">
+              <strong>Important:</strong> This action is permanent and cannot be undone. If you wish to use Edemy 
+              again in the future, you'll need to create a new account with a different email address.
+            </p>
+            
+            <p class="message">
+              We're sorry to see you go. If there's anything we could have done better, we'd love to hear your 
+              feedback at <strong>feedback@edemy.com</strong>.
+            </p>
+            
+            <p class="message">
+              Thank you for being part of the Edemy learning community!
+            </p>
+          </div>
+          <div style="background: #1e293b; padding: 30px; text-align: center; border-top: 1px solid #334155;">
+            <div style="color: #64748b; font-size: 14px;">
+              © ${new Date().getFullYear()} Edemy. All rights reserved.
             </div>
           </div>
         </div>

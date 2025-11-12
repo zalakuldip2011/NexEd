@@ -166,35 +166,18 @@ const InstructorDashboard = () => {
   return (
     <InstructorLayout>
       <div className="p-6">
-        {/* Header with Prominent CTA */}
-        <div className="mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className={`text-3xl font-bold transition-colors ${
-              isDarkMode ? 'text-white' : 'text-gray-900'
-            }`}>
-              Welcome back, {user?.name || 'Instructor'}!
-            </h1>
-            <p className={`mt-2 transition-colors ${
-              isDarkMode ? 'text-slate-400' : 'text-gray-600'
-            }`}>
-              Here's what's happening with your courses today
-            </p>
-          </div>
-          
-          {/* Prominent Create Course Button */}
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => navigate('/instructor/courses/create')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-semibold shadow-lg transition-all duration-300 ${
-              isDarkMode
-                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white'
-                : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white'
-            }`}
-          >
-            <PlusIcon className="h-5 w-5" />
-            Create New Course
-          </motion.button>
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className={`text-3xl font-bold transition-colors ${
+            isDarkMode ? 'text-white' : 'text-gray-900'
+          }`}>
+            Welcome back, {user?.name?.split(' ')[0] || 'Instructor'}!
+          </h1>
+          <p className={`mt-2 transition-colors ${
+            isDarkMode ? 'text-slate-400' : 'text-gray-600'
+          }`}>
+            Here's what's happening with your courses today
+          </p>
         </div>
 
         {/* Empty State - Show when no courses */}
@@ -221,15 +204,11 @@ const InstructorDashboard = () => {
             }`}>
               Create your first course and share your knowledge with students worldwide
             </p>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigate('/instructor/courses/create')}
-              className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              <PlusIcon className="h-5 w-5" />
-              Create Your First Course
-            </motion.button>
+            <p className={`text-sm ${
+              isDarkMode ? 'text-slate-500' : 'text-gray-500'
+            }`}>
+              Use the "Create Course" button in Quick Actions below to get started
+            </p>
           </motion.div>
         )}
 

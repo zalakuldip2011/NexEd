@@ -288,6 +288,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Update user in state (for immediate UI updates)
+  const updateUser = (userData) => {
+    dispatch({
+      type: AUTH_ACTIONS.UPDATE_PROFILE,
+      payload: userData
+    });
+  };
+
   // Clear error function
   const clearError = () => {
     dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
@@ -349,6 +357,7 @@ export const AuthProvider = ({ children }) => {
     verifyEmail,
     resendOTP,
     updateProfile,
+    updateUser,
     changePassword,
     clearError,
     checkAuth

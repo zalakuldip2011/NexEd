@@ -7,7 +7,10 @@ import {
   Bars3Icon,
   XMarkIcon,
   MoonIcon,
-  SunIcon
+  SunIcon,
+  HeartIcon,
+  BellIcon,
+  AcademicCapIcon
 } from '@heroicons/react/24/outline';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -100,7 +103,7 @@ const Header = () => {
     }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">{/* Increased height for better proportion */}
-          {/* Logo */}
+          {/* Left Section - Logo */}
           <div className="flex-shrink-0">
             <Link to="/" className="group">
               <h1 className={`text-3xl font-bold transition-all duration-300 transform group-hover:scale-105 ${
@@ -113,10 +116,10 @@ const Header = () => {
             </Link>
           </div>
 
-          {/* Center Section - Categories, Search, Explore */}
-          <div className="hidden lg:flex items-center space-x-6 flex-1 max-w-3xl mx-8">
+          {/* Center Section - Categories, Search, Buttons */}
+          <div className="hidden lg:flex items-center space-x-4 flex-1 mx-8">
             {/* Categories Dropdown */}
-            <div className="relative"
+            <div className="relative flex-shrink-0"
                  onMouseEnter={handleDropdownEnter}
                  onMouseLeave={handleDropdownLeave}>
               <button
@@ -161,8 +164,8 @@ const Header = () => {
               )}
             </div>
 
-            {/* Search Bar */}
-            <div className="flex-1 relative group">
+            {/* Search Bar - Takes remaining space */}
+            <div className="flex-1 relative group min-w-0">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <MagnifyingGlassIcon className={`h-5 w-5 transition-colors duration-200 ${
                   isDarkMode
@@ -174,7 +177,7 @@ const Header = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search for courses, instructors..."
+                placeholder="Search for courses"
                 className={`w-full pl-12 pr-4 py-3 rounded-xl border shadow-sm focus:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 ${
                   isDarkMode
                     ? 'bg-slate-800/50 border-slate-600/50 text-white placeholder-slate-400 focus:ring-purple-500/50 focus:border-purple-500/50 focus:bg-slate-800/70'
@@ -186,7 +189,7 @@ const Header = () => {
             {/* Explore Button */}
             <Link 
               to="/courses"
-              className={`px-5 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md ${
+              className={`flex-shrink-0 px-5 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md ${
                 isDarkMode
                   ? 'text-slate-300 hover:text-white bg-slate-800/50 hover:bg-slate-700/70 border border-slate-600/50 hover:border-slate-500'
                   : 'text-gray-700 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300'
@@ -198,17 +201,17 @@ const Header = () => {
             {isAuthenticated && user?.role === 'instructor' ? (
               <Link 
                 to="/instructor/dashboard"
-                className={`px-5 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md border ${
+                className={`flex-shrink-0 px-5 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md border ${
                   isDarkMode
                     ? 'text-blue-400 hover:text-white bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/50 hover:border-blue-400'
                     : 'text-blue-600 hover:text-white bg-blue-50 hover:bg-blue-600 border-blue-200 hover:border-blue-600'
                 }`}>
-                Instructor Dashboard
+                Instructor
               </Link>
             ) : (
               <button 
                 onClick={handleBecomeEducator}
-                className={`px-5 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md border ${
+                className={`flex-shrink-0 px-5 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md border ${
                   isDarkMode
                     ? 'text-blue-400 hover:text-white bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/50 hover:border-blue-400'
                     : 'text-blue-600 hover:text-white bg-blue-50 hover:bg-blue-600 border-blue-200 hover:border-blue-600'
@@ -218,58 +221,107 @@ const Header = () => {
             )}
           </div>
 
-          {/* Right Section - Theme Toggle, Cart, Login/Profile, Signup, Mobile Menu */}
-          <div className="flex items-center space-x-3">
-            {/* Theme Toggle */}
-            <button 
-              onClick={toggleTheme}
-              className={`p-3 rounded-xl transition-all duration-200 transform hover:scale-110 shadow-sm hover:shadow-md ${
-                isDarkMode
-                  ? 'text-slate-300 hover:text-white hover:bg-slate-800/50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              {isDarkMode ? (
-                <SunIcon className="h-6 w-6" />
-              ) : (
-                <MoonIcon className="h-6 w-6" />
-              )}
-            </button>
-
-            {/* Cart - Hidden on mobile */}
-            <button className={`hidden sm:flex p-3 rounded-xl transition-all duration-200 transform hover:scale-110 shadow-sm hover:shadow-md relative group ${
-              isDarkMode
-                ? 'text-slate-300 hover:text-white hover:bg-slate-800/50'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-            }`}>
-              <ShoppingCartIcon className="h-6 w-6" />
-              <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
-                0
-              </span>
-            </button>
-
+          {/* Right Section - Actions & Profile (moved to very end) */}
+          <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-3">
             {/* Authentication Section */}
             {isAuthenticated ? (
-              /* User Menu */
-              <div className="relative"
-                   onMouseEnter={handleUserMenuEnter}
-                   onMouseLeave={handleUserMenuLeave}>
-                <button
-                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className={`flex items-center space-x-3 p-2 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md ${
+              <>
+                {/* My Learning Button */}
+                <Link
+                  to="/my-learning"
+                  className={`hidden lg:flex items-center space-x-2 px-4 py-2.5 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md ${
                     isDarkMode
                       ? 'text-slate-300 hover:text-white hover:bg-slate-800/50'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                   }`}
                 >
-                  <div className="relative">
-                    <UserCircleIcon className="h-8 w-8" />
-                    <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 rounded-full border-2 border-slate-900"></div>
-                  </div>
-                  <span className="hidden md:block text-sm font-medium">
-                    {user?.username || user?.fullName || 'User'}
+                  <AcademicCapIcon className="h-5 w-5" />
+                  <span className="text-sm font-medium">My Learning</span>
+                </Link>
+
+                {/* Wishlist Button */}
+                <Link
+                  to="/wishlist"
+                  className={`hidden md:flex p-2.5 rounded-xl transition-all duration-200 transform hover:scale-110 shadow-sm hover:shadow-md relative group ${
+                    isDarkMode
+                      ? 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <HeartIcon className="h-6 w-6" />
+                  <span className="absolute -top-1 -right-1 h-5 w-5 bg-pink-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
+                    0
                   </span>
-                  <ChevronDownIcon className={`h-4 w-4 transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                </Link>
+
+                {/* Cart Button */}
+                <Link
+                  to="/cart"
+                  className={`hidden sm:flex p-2.5 rounded-xl transition-all duration-200 transform hover:scale-110 shadow-sm hover:shadow-md relative group ${
+                    isDarkMode
+                      ? 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <ShoppingCartIcon className="h-6 w-6" />
+                  <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
+                    0
+                  </span>
+                </Link>
+
+                {/* Notifications Button */}
+                <button className={`hidden sm:flex p-2.5 rounded-xl transition-all duration-200 transform hover:scale-110 shadow-sm hover:shadow-md relative group ${
+                  isDarkMode
+                    ? 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}>
+                  <BellIcon className="h-6 w-6" />
+                  <span className="absolute -top-1 -right-1 h-5 w-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
+                    0
+                  </span>
+                </button>
+
+                {/* Divider */}
+                <div className={`hidden sm:block h-8 w-px mx-1 ${
+                  isDarkMode ? 'bg-slate-700' : 'bg-gray-300'
+                }`}></div>
+
+                {/* User Profile Menu - At the very end */}
+                <div className="relative"
+                     onMouseEnter={handleUserMenuEnter}
+                     onMouseLeave={handleUserMenuLeave}>
+                  <button
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className={`flex items-center space-x-2 p-1.5 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md ${
+                      isDarkMode
+                        ? 'hover:bg-slate-800/50'
+                        : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    {/* Profile Photo / Initial */}
+                    <div className={`relative h-10 w-10 rounded-full flex items-center justify-center font-semibold text-white shadow-lg ${
+                      user?.profile?.avatar 
+                        ? '' 
+                        : isDarkMode
+                          ? 'bg-gradient-to-br from-blue-500 to-purple-600'
+                          : 'bg-gradient-to-br from-blue-600 to-purple-700'
+                    }`}>
+                      {user?.profile?.avatar ? (
+                        <img 
+                          src={user.profile.avatar} 
+                          alt={user?.fullName || user?.username} 
+                          className="h-full w-full rounded-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-lg">
+                          {(user?.fullName?.[0] || user?.username?.[0] || 'U').toUpperCase()}
+                        </span>
+                      )}
+                      <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 bg-green-500 rounded-full border-2 border-white"></div>
+                    </div>
+                    <ChevronDownIcon className={`hidden md:block h-4 w-4 transition-transform duration-200 ${
+                      isUserMenuOpen ? 'rotate-180' : ''
+                    } ${isDarkMode ? 'text-slate-300' : 'text-gray-600'}`} />
                 </button>
 
                 {isUserMenuOpen && (
@@ -301,7 +353,7 @@ const Header = () => {
                           }`}
                           onClick={() => setIsUserMenuOpen(false)}
                         >
-                          Instructor Dashboard
+                          Instructor
                         </Link>
                       )}
                       <Link
@@ -353,12 +405,17 @@ const Header = () => {
                   </div>
                 )}
               </div>
+            </>
             ) : (
-              /* Login/Signup Buttons */
+              /* Login/Signup Buttons - At the end for non-authenticated users */
               <div className="hidden sm:flex items-center space-x-3">
                 <Link 
                   to="/login"
-                  className="px-5 py-2.5 text-sm font-medium text-slate-300 hover:text-white bg-slate-800/50 hover:bg-slate-700/70 border border-slate-600/50 hover:border-slate-500 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md"
+                  className={`px-5 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 transform hover:scale-105 shadow-sm hover:shadow-md ${
+                    isDarkMode
+                      ? 'text-slate-300 hover:text-white bg-slate-800/50 hover:bg-slate-700/70 border border-slate-600/50 hover:border-slate-500'
+                      : 'text-gray-700 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 border border-gray-200 hover:border-gray-300'
+                  }`}
                 >
                   Login
                 </Link>
@@ -371,7 +428,7 @@ const Header = () => {
               </div>
             )}
 
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Button - Always at the very end */}
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className={`lg:hidden p-3 rounded-xl transition-all duration-200 transform hover:scale-110 shadow-sm hover:shadow-md ${
@@ -415,6 +472,58 @@ const Header = () => {
 
               {/* Mobile Navigation */}
               <div className="space-y-2">
+                {/* Authenticated User Mobile Options */}
+                {isAuthenticated && (
+                  <>
+                    <Link 
+                      to="/my-learning"
+                      className={`flex items-center space-x-3 w-full px-4 py-3 rounded-xl transition-all duration-200 ${
+                        isDarkMode
+                          ? 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                          : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+                      }`}
+                      onClick={() => setIsMobileMenuOpen(false)}>
+                      <AcademicCapIcon className="h-5 w-5" />
+                      <span>My Learning</span>
+                    </Link>
+                    <Link 
+                      to="/wishlist"
+                      className={`flex items-center space-x-3 w-full px-4 py-3 rounded-xl transition-all duration-200 ${
+                        isDarkMode
+                          ? 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                          : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+                      }`}
+                      onClick={() => setIsMobileMenuOpen(false)}>
+                      <HeartIcon className="h-5 w-5" />
+                      <span>Wishlist</span>
+                      <span className="ml-auto px-2 py-0.5 bg-pink-500 text-white text-xs rounded-full">0</span>
+                    </Link>
+                    <Link 
+                      to="/cart"
+                      className={`flex items-center space-x-3 w-full px-4 py-3 rounded-xl transition-all duration-200 ${
+                        isDarkMode
+                          ? 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                          : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+                      }`}
+                      onClick={() => setIsMobileMenuOpen(false)}>
+                      <ShoppingCartIcon className="h-5 w-5" />
+                      <span>Cart</span>
+                      <span className="ml-auto px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">0</span>
+                    </Link>
+                    <button 
+                      className={`flex items-center space-x-3 w-full px-4 py-3 rounded-xl transition-all duration-200 ${
+                        isDarkMode
+                          ? 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                          : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+                      }`}>
+                      <BellIcon className="h-5 w-5" />
+                      <span>Notifications</span>
+                      <span className="ml-auto px-2 py-0.5 bg-blue-500 text-white text-xs rounded-full">0</span>
+                    </button>
+                    <div className={`border-t my-2 ${isDarkMode ? 'border-slate-700/50' : 'border-gray-200/50'}`}></div>
+                  </>
+                )}
+                
                 <button className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 ${
                   isDarkMode
                     ? 'text-slate-300 hover:text-white hover:bg-slate-800/50'
@@ -441,7 +550,7 @@ const Header = () => {
                         : 'text-blue-600 hover:text-white hover:bg-blue-500/10'
                     }`}
                     onClick={() => setIsMobileMenuOpen(false)}>
-                    Instructor Dashboard
+                    Instructor
                   </Link>
                 ) : (
                   <button 

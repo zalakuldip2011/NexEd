@@ -222,6 +222,21 @@ const userSchema = new mongoose.Schema({
       type: String
     }
   },
+  accountDeletion: {
+    requestedAt: {
+      type: Date
+    },
+    scheduledFor: {
+      type: Date
+    },
+    reason: {
+      type: String
+    },
+    isScheduled: {
+      type: Boolean,
+      default: false
+    }
+  },
   isActive: {
     type: Boolean,
     default: true
@@ -485,6 +500,27 @@ userSchema.methods.resetPassword = function(newPassword) {
   this.security.passwordChangedAt = Date.now() - 1000;
   this.security.loginAttempts = 0;
   this.security.lockUntil = undefined;
+};
+
+// Instance method to schedule account deletion
+userSchema.methods.scheduleAccountDeletion = function(reason) {
+  const deletionDate = new Date();
+  deletionDate.setDate(deletionDate.getDate() + 14); // 14 days grace period
+  
+  this.accountDeletion.requestedAt = Date.now();
+  this.accountDeletion.scheduledFor = deletionDate;
+  this.accountDeletion.reason = reason;
+  this.accountDeletion.isScheduled = true;
+  
+  return deletionDate;
+};
+
+// Instance method to cancel account deletion
+userSchema.methods.cancelAccountDeletion = function() {
+  this.accountDeletion.requestedAt = undefined;
+  this.accountDeletion.scheduledFor = undefined;
+  this.accountDeletion.reason = undefined;
+  this.accountDeletion.isScheduled = false;
 };
 
 // Static method to find user by email or username

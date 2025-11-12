@@ -1,6 +1,8 @@
 const crypto = require('crypto');
 const { promisify } = require('util');
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const path = require('path');
 const User = require('../models/User');
 const emailService = require('../utils/emailService');
 
@@ -880,6 +882,406 @@ const becomeEducator = async (req, res) => {
   }
 };
 
+// @desc    Upload profile photo
+// @route   POST /api/auth/upload-avatar
+// @access  Private
+const uploadAvatar = async (req, res) => {
+  try {
+    console.log('🖼️  Upload Avatar Controller');
+    console.log('   User ID:', req.user?.id);
+    console.log('   File received:', req.file ? 'Yes' : 'No');
+    
+    if (!req.file) {
+      console.error('   ❌ No file in request');
+      return res.status(400).json({
+        success: false,
+        message: 'Please upload an image file'
+      });
+    }
+
+    console.log('   File details:', {
+      filename: req.file.filename,
+      size: req.file.size,
+      mimetype: req.file.mimetype
+    });
+
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      console.error('   ❌ User not found');
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Delete old avatar if exists
+    if (user.profile.avatar) {
+      const oldAvatarPath = path.join(__dirname, '..', user.profile.avatar);
+      if (fs.existsSync(oldAvatarPath)) {
+        fs.unlinkSync(oldAvatarPath);
+        console.log('   ✅ Old avatar deleted');
+      }
+    }
+
+    // Update avatar path
+    user.profile.avatar = `/uploads/avatars/${req.file.filename}`;
+    await user.save();
+
+    console.log('   ✅ Avatar updated successfully:', user.profile.avatar);
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile photo updated successfully',
+      data: {
+        avatar: user.profile.avatar
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Upload avatar error:', error);
+    console.error('   Error stack:', error.stack);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload profile photo',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// @desc    Update user name
+// @route   PUT /api/auth/update-name
+// @access  Private
+const updateName = async (req, res) => {
+  try {
+    const { firstName, lastName } = req.body;
+
+    if (!firstName && !lastName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide at least first name or last name'
+      });
+    }
+
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    if (firstName) user.profile.firstName = firstName;
+    if (lastName) user.profile.lastName = lastName;
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Name updated successfully',
+      data: {
+        user
+      }
+    });
+
+  } catch (error) {
+    console.error('Update name error:', error);
+    
+    if (error.name === 'ValidationError') {
+      const errors = {};
+      Object.keys(error.errors).forEach(key => {
+        errors[key] = error.errors[key].message;
+      });
+      
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update name'
+    });
+  }
+};
+
+// @desc    Request password change with OTP
+// @route   POST /api/auth/request-password-change
+// @access  Private
+const requestPasswordChange = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check rate limiting
+    if (!user.canRequestPasswordReset()) {
+      return res.status(429).json({
+        success: false,
+        message: 'Please wait at least 2 minutes before requesting another code',
+        code: 'TOO_MANY_REQUESTS'
+      });
+    }
+
+    // Generate OTP
+    const otp = user.generatePasswordResetOTP();
+    await user.save({ validateBeforeSave: false });
+
+    // Send OTP email
+    try {
+      await emailService.sendPasswordChangeOTPEmail(user.email, user.username, otp);
+      
+      console.log(`Password change OTP sent to user: ${user.email}`);
+
+      res.status(200).json({
+        success: true,
+        message: 'Verification code sent to your email address'
+      });
+
+    } catch (emailError) {
+      console.error('Failed to send password change email:', emailError);
+      
+      // Clear the OTP if email failed
+      user.security.passwordResetToken = undefined;
+      user.security.passwordResetExpires = undefined;
+      await user.save({ validateBeforeSave: false });
+      
+      res.status(500).json({
+        success: false,
+        message: 'Failed to send verification code. Please try again.'
+      });
+    }
+
+  } catch (error) {
+    console.error('Request password change error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error. Please try again later.'
+    });
+  }
+};
+
+// @desc    Change password with OTP verification
+// @route   PUT /api/auth/change-password-with-otp
+// @access  Private
+const changePasswordWithOTP = async (req, res) => {
+  try {
+    const { otp, newPassword, confirmPassword } = req.body;
+
+    if (!otp || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'OTP, new password, and confirm password are required'
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Passwords do not match',
+        code: 'PASSWORDS_MISMATCH'
+      });
+    }
+
+    const user = await User.findById(req.user.id)
+      .select('+security.passwordResetToken +security.passwordResetExpires +password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Verify OTP
+    const verificationResult = user.verifyPasswordResetOTP(otp);
+    
+    if (!verificationResult.success) {
+      await user.save({ validateBeforeSave: false });
+      return res.status(400).json({
+        success: false,
+        message: verificationResult.message,
+        code: 'INVALID_OTP'
+      });
+    }
+
+    // Check if new password is same as old password
+    const isSamePassword = await user.correctPassword(newPassword, user.password);
+    if (isSamePassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password cannot be the same as your current password'
+      });
+    }
+
+    // Update password
+    user.password = newPassword;
+    user.security.passwordResetToken = undefined;
+    user.security.passwordResetExpires = undefined;
+    user.security.passwordResetVerified = false;
+    await user.save();
+
+    console.log(`Password changed successfully for user: ${user.email}`);
+
+    // Send new token
+    createSendToken(user, 200, res, 'Password changed successfully');
+
+  } catch (error) {
+    console.error('Change password with OTP error:', error);
+    
+    if (error.name === 'ValidationError') {
+      const errors = {};
+      Object.keys(error.errors).forEach(key => {
+        errors[key] = error.errors[key].message;
+      });
+
+      return res.status(400).json({
+        success: false,
+        message: 'Password validation failed',
+        errors
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Failed to change password'
+    });
+  }
+};
+
+// @desc    Request account deletion
+// @route   POST /api/auth/request-delete-account
+// @access  Private
+const requestDeleteAccount = async (req, res) => {
+  try {
+    const { reason, password } = req.body;
+
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password is required to delete account'
+      });
+    }
+
+    const user = await User.findById(req.user.id).select('+password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Verify password
+    const isPasswordCorrect = await user.correctPassword(password, user.password);
+    if (!isPasswordCorrect) {
+      return res.status(400).json({
+        success: false,
+        message: 'Incorrect password'
+      });
+    }
+
+    // Check if user has published courses (for instructors)
+    let hasPublishedCourses = false;
+    let enrollmentCount = 0;
+    
+    if (user.role === 'instructor') {
+      const Course = require('../models/Course');
+      const courses = await Course.find({ instructor: user._id });
+      hasPublishedCourses = courses.some(course => course.isPublished);
+      enrollmentCount = courses.reduce((total, course) => total + (course.enrollmentCount || 0), 0);
+    }
+
+    // Schedule deletion
+    const deletionDate = user.scheduleAccountDeletion(reason);
+    await user.save();
+
+    // Send confirmation email
+    try {
+      await emailService.sendAccountDeletionEmail(
+        user.email, 
+        user.username, 
+        deletionDate, 
+        hasPublishedCourses
+      );
+    } catch (emailError) {
+      console.error('Failed to send deletion confirmation email:', emailError);
+    }
+
+    console.log(`Account deletion requested for user: ${user.email}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Account deletion has been scheduled',
+      data: {
+        scheduledFor: deletionDate,
+        gracePeriodDays: 14,
+        hasPublishedCourses,
+        enrollmentCount
+      }
+    });
+
+  } catch (error) {
+    console.error('Request delete account error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process account deletion request'
+    });
+  }
+};
+
+// @desc    Cancel account deletion
+// @route   POST /api/auth/cancel-delete-account
+// @access  Private
+const cancelDeleteAccount = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    if (!user.accountDeletion.isScheduled) {
+      return res.status(400).json({
+        success: false,
+        message: 'No account deletion request found'
+      });
+    }
+
+    // Cancel deletion
+    user.cancelAccountDeletion();
+    await user.save();
+
+    console.log(`Account deletion cancelled for user: ${user.email}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Account deletion has been cancelled successfully',
+      data: {
+        user
+      }
+    });
+
+  } catch (error) {
+    console.error('Cancel delete account error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to cancel account deletion'
+    });
+  }
+};
+
 module.exports = {
   signup,
   login,
@@ -893,5 +1295,11 @@ module.exports = {
   updateProfile,
   changePassword,
   checkAuth,
-  becomeEducator
+  becomeEducator,
+  uploadAvatar,
+  updateName,
+  requestPasswordChange,
+  changePasswordWithOTP,
+  requestDeleteAccount,
+  cancelDeleteAccount
 };

@@ -22,17 +22,25 @@ import CourseAnalytics from './pages/instructor/CourseAnalytics';
 import CoursesRoutes from './pages/courses';
 import CourseLearning from './pages/courses/CourseLearning';
 import InteractiveCoursePlayer from './pages/courses/InteractiveCoursePlayer';
-import UserProfile from './pages/profile/UserProfile';
+import EnhancedUserProfile from './pages/profile/EnhancedUserProfile';
+import MyLearning from './pages/MyLearning';
+import Wishlist from './pages/Wishlist';
+import Cart from './pages/Cart';
+import AuthenticatedHome from './pages/AuthenticatedHome';
 import './App.css';
 import './styles/theme-global.css';
 
 const AnimatedRoutes = () => {
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
   
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<LandingPage />} />
+        {/* Home Route - Different based on auth status */}
+        <Route path="/" element={isAuthenticated ? <AuthenticatedHome /> : <LandingPage />} />
+        
+        <Route path="/login" element={<Login />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/verify-email" element={<EmailVerification />} />
@@ -42,6 +50,27 @@ const AnimatedRoutes = () => {
         
         {/* Course Explorer - Public Access */}
         <Route path="/courses/*" element={<CoursesRoutes />} />
+        
+        {/* My Learning - Student Access */}
+        <Route path="/my-learning" element={
+          <ProtectedRoute allowedRoles={['student']}>
+            <MyLearning />
+          </ProtectedRoute>
+        } />
+        
+        {/* Wishlist */}
+        <Route path="/wishlist" element={
+          <ProtectedRoute>
+            <Wishlist />
+          </ProtectedRoute>
+        } />
+        
+        {/* Cart */}
+        <Route path="/cart" element={
+          <ProtectedRoute>
+            <Cart />
+          </ProtectedRoute>
+        } />
         
         {/* Course Learning - Student Access */}
         <Route path="/learn/:courseId" element={
@@ -60,7 +89,7 @@ const AnimatedRoutes = () => {
         {/* User Profile */}
         <Route path="/profile" element={
           <ProtectedRoute>
-            <UserProfile />
+            <EnhancedUserProfile />
           </ProtectedRoute>
         } />
         
