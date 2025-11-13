@@ -94,10 +94,10 @@ const CommunityGuidelines = () => {
               Our Commitment
             </h2>
             <p className={`mb-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-              At Edemy, we're committed to creating a safe, welcoming, and productive environment for all learners and instructors. These guidelines help ensure that everyone can learn, teach, and connect without fear of harassment, discrimination, or abuse.
+              At NexEd, we're committed to creating a safe, welcoming, and productive environment for all learners and instructors. These guidelines help ensure that everyone can learn, teach, and connect without fear of harassment, discrimination, or abuse.
             </p>
             <p className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
-              By using Edemy, you agree to follow these guidelines. Violations may result in content removal, account suspension, or permanent ban from the platform.
+              By using NexEd, you agree to follow these guidelines. Violations may result in content removal, account suspension, or permanent ban from the platform.
             </p>
           </div>
         </section>
@@ -201,7 +201,7 @@ const CommunityGuidelines = () => {
             }`}>
               <li>The "Report" button on any content</li>
               <li>Contacting our support team directly</li>
-              <li>Emailing conduct@edemy.com</li>
+              <li>Emailing conduct@nexed.com</li>
             </ul>
             <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
               We will protect the privacy of those who report violations and will not tolerate retaliation.

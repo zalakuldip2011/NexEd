@@ -513,7 +513,7 @@ const verifyEmail = async (req, res) => {
     console.log(`Email verified for user: ${user.email} (${user.username})`);
 
     // Auto-login user after email verification
-    createSendToken(user, 200, res, 'Email verified successfully! Welcome to Edemy.');
+    createSendToken(user, 200, res, 'Email verified successfully! Welcome to NexEd.');
 
   } catch (error) {
     console.error('Email verification error:', error);
@@ -867,7 +867,7 @@ const becomeEducator = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: 'Congratulations! You are now an educator on Edemy.',
+      message: 'Congratulations! You are now an educator on NexEd.',
       data: {
         user
       }

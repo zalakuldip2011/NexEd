@@ -85,7 +85,7 @@ const BecomeInstructor = () => {
               <h1 className={`text-5xl font-bold mb-6 ${
                 isDarkMode ? 'text-white' : 'text-gray-900'
               }`}>
-                Teach on <span className="text-blue-500">Edemy</span>
+                Teach on <span className="text-blue-500">NexEd</span>
               </h1>
               <p className={`text-xl mb-8 ${
                 isDarkMode ? 'text-gray-300' : 'text-gray-600'
@@ -120,7 +120,7 @@ const BecomeInstructor = () => {
           <h2 className={`text-3xl font-bold mb-12 text-center ${
             isDarkMode ? 'text-white' : 'text-gray-900'
           }`}>
-            Why Teach on Edemy?
+            Why Teach on NexEd?
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {benefits.map((benefit, index) => (

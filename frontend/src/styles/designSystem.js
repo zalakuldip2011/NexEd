@@ -1,5 +1,5 @@
 /**
- * Edemy Design System
+ * NexEd Design System
  * Professional Material Design-inspired theme system
  * with semantic colors, spacing, typography, and animations
  */

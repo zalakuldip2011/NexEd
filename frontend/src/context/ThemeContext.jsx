@@ -13,7 +13,7 @@ export const useTheme = () => {
 export const ThemeProvider = ({ children }) => {
   const [isDarkMode, setIsDarkMode] = useState(() => {
     // Check localStorage first, default to light mode
-    const savedTheme = localStorage.getItem('edemy-theme');
+    const savedTheme = localStorage.getItem('nexed-theme');
     if (savedTheme) {
       return savedTheme === 'dark';
     }
@@ -23,7 +23,7 @@ export const ThemeProvider = ({ children }) => {
 
   useEffect(() => {
     // Save theme preference to localStorage
-    localStorage.setItem('edemy-theme', isDarkMode ? 'dark' : 'light');
+    localStorage.setItem('nexed-theme', isDarkMode ? 'dark' : 'light');
     
     // Apply theme to document
     if (isDarkMode) {
@@ -38,7 +38,7 @@ export const ThemeProvider = ({ children }) => {
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handleChange = (e) => {
       // Only update if user hasn't manually set a preference
-      const savedTheme = localStorage.getItem('edemy-theme');
+      const savedTheme = localStorage.getItem('nexed-theme');
       if (!savedTheme) {
         setIsDarkMode(e.matches);
       }

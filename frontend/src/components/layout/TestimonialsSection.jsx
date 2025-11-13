@@ -11,7 +11,7 @@ const TestimonialsSection = () => {
       role: "Software Engineer at Google",
       image: "https://images.unsplash.com/photo-1494790108755-2616b612b5e5?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
       rating: 5,
-      quote: "Edemy completely transformed my career. The React course helped me land my dream job at Google. The instructors are world-class and the content is always up-to-date.",
+      quote: "NexEd completely transformed my career. The React course helped me land my dream job at Google. The instructors are world-class and the content is always up-to-date.",
       course: "Complete React Developer Course"
     },
     {
@@ -47,7 +47,7 @@ const TestimonialsSection = () => {
       role: "Product Manager at Amazon",
       image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
       rating: 5,
-      quote: "Edemy's business courses helped me transition from developer to product manager. The content is practical and the community is supportive.",
+      quote: "NexEd's business courses helped me transition from developer to product manager. The content is practical and the community is supportive.",
       course: "Product Management Essentials"
     },
     {
@@ -120,7 +120,7 @@ const TestimonialsSection = () => {
             What Our Students Say
           </h2>
           <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-            Join thousands of successful learners who have transformed their careers with Edemy
+            Join thousands of successful learners who have transformed their careers with NexEd
           </p>
         </div>
 

@@ -1,7 +1,7 @@
 {
-  "name": "edemy-course-service",
+  "name": "nexed-course-service",
   "version": "2.0.0",
-  "description": "Edemy Course Creation and Publishing Service - Complete Backend Rewrite",
+  "description": "NexEd Course Creation and Publishing Service - Complete Backend Rewrite",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -24,7 +24,7 @@
     "course-management",
     "publishing"
   ],
-  "author": "Edemy Team",
+  "author": "NexEd Team",
   "license": "MIT",
   "dependencies": {
     "bcryptjs": "^2.4.3",

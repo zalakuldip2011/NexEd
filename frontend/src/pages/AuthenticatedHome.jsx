@@ -41,7 +41,7 @@ const AuthenticatedHome = () => {
       role: 'Software Developer',
       image: null,
       rating: 5,
-      text: 'Edemy has completely transformed my career. The courses are top-notch and the instructors are industry experts!',
+      text: 'NexEd has completely transformed my career. The courses are top-notch and the instructors are industry experts!',
       date: '2 weeks ago'
     },
     {

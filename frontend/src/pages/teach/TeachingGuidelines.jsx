@@ -150,7 +150,7 @@ const TeachingGuidelines = () => {
             <p className={`text-xl max-w-3xl mx-auto ${
               isDarkMode ? 'text-gray-300' : 'text-gray-600'
             }`}>
-              Everything you need to know to create high-quality, engaging courses on Edemy.
+              Everything you need to know to create high-quality, engaging courses on NexEd.
             </p>
           </div>
         </div>

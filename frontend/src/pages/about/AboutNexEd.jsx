@@ -9,7 +9,7 @@ import {
   UserGroupIcon
 } from '@heroicons/react/24/outline';
 
-const AboutEdemy = () => {
+const AboutNexEd = () => {
   const { isDarkMode } = useTheme();
 
   const stats = [
@@ -55,7 +55,7 @@ const AboutEdemy = () => {
             <h1 className={`text-5xl font-bold mb-6 ${
               isDarkMode ? 'text-white' : 'text-gray-900'
             }`}>
-              About <span className="text-blue-500">Edemy</span>
+              About <span className="text-blue-500">NexEd</span>
             </h1>
             <p className={`text-xl max-w-3xl mx-auto ${
               isDarkMode ? 'text-gray-300' : 'text-gray-600'
@@ -80,7 +80,7 @@ const AboutEdemy = () => {
               <p className={`text-lg mb-6 ${
                 isDarkMode ? 'text-gray-300' : 'text-gray-700'
               }`}>
-                Edemy was founded with a simple yet powerful vision: to make quality education accessible to everyone, regardless of their location or background.
+                NexEd was founded with a simple yet powerful vision: to make quality education accessible to everyone, regardless of their location or background.
               </p>
               <p className={`text-lg mb-6 ${
                 isDarkMode ? 'text-gray-300' : 'text-gray-700'
@@ -216,4 +216,4 @@ const AboutEdemy = () => {
   );
 };
 
-export default AboutEdemy;
+export default AboutNexEd;

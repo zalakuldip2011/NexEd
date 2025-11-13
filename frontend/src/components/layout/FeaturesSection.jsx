@@ -80,7 +80,7 @@ const FeaturesSection = () => {
           <h2 className={`text-4xl md:text-5xl font-bold mb-4 ${
             isDarkMode ? 'text-white' : 'text-gray-900'
           }`}>
-            Why Choose Edemy?
+            Why Choose NexEd?
           </h2>
           <p className={`text-lg md:text-xl max-w-3xl mx-auto ${
             isDarkMode ? 'text-gray-400' : 'text-gray-600'

@@ -1,5 +1,5 @@
 /**
- * Edemy UI Component Library
+ * NexEd UI Component Library
  * Beautiful Material UI-inspired components for smooth, professional UI
  */
 

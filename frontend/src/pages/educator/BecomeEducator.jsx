@@ -158,7 +158,7 @@ const BecomeEducator = () => {
       <div className="py-20 bg-slate-800/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-white mb-4">Why Teach on Edemy?</h2>
+            <h2 className="text-4xl font-bold text-white mb-4">Why Teach on NexEd?</h2>
             <p className="text-xl text-slate-300">Join thousands of instructors earning money by sharing their expertise</p>
           </div>
           

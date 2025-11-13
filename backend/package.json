@@ -1,7 +1,7 @@
 {
-  "name": "edemy-backend",
+  "name": "nexed-backend",
   "version": "1.0.0",
-  "description": "Edemy E-Learning Platform Backend",
+  "description": "NexEd – Empowering the Next Generation of Learners - Backend API",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -15,7 +15,7 @@
     "mern",
     "api"
   ],
-  "author": "Edemy Team",
+  "author": "NexEd Team",
   "license": "MIT",
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -32,7 +32,9 @@
     "morgan": "^1.10.0",
     "multer": "^1.4.4",
     "node-cron": "^4.2.1",
-    "nodemailer": "^7.0.10"
+    "nodemailer": "^7.0.10",
+    "replace-in-file": "^8.3.0",
+    "stripe": "^14.10.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"

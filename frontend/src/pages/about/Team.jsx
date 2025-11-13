@@ -24,7 +24,7 @@ const Team = () => {
       role: 'UI/UX Designer & Frontend Developer',
       image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah',
       bio: 'Creative designer with a passion for intuitive user experiences. Expert in creating beautiful, accessible interfaces that users love.',
-      email: 'sarah@edemy.com',
+      email: 'sarah@nexed.com',
       linkedin: 'https://linkedin.com/in/sarahmitchell',
       github: 'https://github.com/sarahmitchell'
     },
@@ -33,7 +33,7 @@ const Team = () => {
       role: 'Backend Developer & DevOps Engineer',
       image: 'https://api.dicebear.com/7.x/avataaars/svg?seed=David',
       bio: 'Infrastructure specialist focused on building scalable, secure systems. Expert in cloud architecture, database optimization, and API design.',
-      email: 'david@edemy.com',
+      email: 'david@nexed.com',
       linkedin: 'https://linkedin.com/in/davidchen',
       github: 'https://github.com/davidchen'
     }
@@ -57,7 +57,7 @@ const Team = () => {
             <p className={`text-xl max-w-3xl mx-auto ${
               isDarkMode ? 'text-gray-300' : 'text-gray-600'
             }`}>
-              The passionate individuals behind Edemy, dedicated to transforming education through technology.
+              The passionate individuals behind NexEd, dedicated to transforming education through technology.
             </p>
           </div>
         </div>
@@ -166,7 +166,7 @@ const Team = () => {
             If you're excited about the future of online learning, we'd love to hear from you!
           </p>
           <a 
-            href="mailto:careers@edemy.com"
+            href="mailto:careers@nexed.com"
             className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl"
           >
             <EnvelopeIcon className="h-6 w-6 mr-2" />

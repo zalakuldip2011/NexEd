@@ -1343,7 +1343,7 @@ const EnhancedUserProfile = () => {
                     </p>
                     
                     <p>
-                      Please note, if you want to reinstate your account after submitting a deletion request, you will have <strong>14 days</strong> after the initial submission date to reach out to <strong>privacy@edemy.com</strong> to cancel this request.
+                      Please note, if you want to reinstate your account after submitting a deletion request, you will have <strong>14 days</strong> after the initial submission date to reach out to <strong>privacy@nexed.com</strong> to cancel this request.
                     </p>
                   </div>
                   
@@ -1361,7 +1361,7 @@ const EnhancedUserProfile = () => {
                       <p className={`text-sm ${
                         isDarkMode ? 'text-orange-200' : 'text-orange-600'
                       }`}>
-                        <strong>Warning:</strong> You are an instructor with courses. Please note, any courses with enrollments cannot be deleted due to the lifetime guarantee provided by Edemy's Terms of Use. After account closure, courses with enrollments will be transferred to a generic Edemy instructor account so that no new enrollments can occur and enrolled learners can continue to access the course.
+                        <strong>Warning:</strong> You are an instructor with courses. Please note, any courses with enrollments cannot be deleted due to the lifetime guarantee provided by NexEd's Terms of Use. After account closure, courses with enrollments will be transferred to a generic NexEd instructor account so that no new enrollments can occur and enrolled learners can continue to access the course.
                       </p>
                     </div>
                   )}

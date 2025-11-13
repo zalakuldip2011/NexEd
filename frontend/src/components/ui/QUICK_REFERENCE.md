@@ -1,4 +1,4 @@
-# 🎨 Edemy UI Component System - Quick Reference
+# 🎨 NexEd UI Component System - Quick Reference
 
 ## 🚀 Import & Use
 

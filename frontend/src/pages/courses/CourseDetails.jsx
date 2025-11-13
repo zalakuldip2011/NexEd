@@ -418,7 +418,11 @@ const CourseDetails = () => {
                         <button
                           onClick={toggleWishlist}
                           disabled={togglingWishlist}
-                          className={`w-full py-3 px-6 border-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${\n                            isDarkMode\n                              ? 'border-slate-600 text-slate-300 hover:bg-slate-700'\n                              : 'border-gray-300 text-gray-700 hover:bg-gray-50'\n                          } disabled:opacity-50`}
+                          className={`w-full py-3 px-6 border-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+                            isDarkMode
+                              ? 'border-slate-600 text-slate-300 hover:bg-slate-700'
+                              : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                          } disabled:opacity-50`}
                         >
                           {isInWishlist ? (
                             <><HeartSolid className="h-5 w-5 text-red-500" /> Remove from Wishlist</>
@@ -434,7 +438,11 @@ const CourseDetails = () => {
                               <button
                                 onClick={addToCart}
                                 disabled={addingToCart}
-                                className={`w-full py-3 px-6 border-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${\n                                  isDarkMode\n                                    ? 'border-purple-500 text-purple-300 hover:bg-purple-500/20'\n                                    : 'border-purple-600 text-purple-600 hover:bg-purple-50'\n                                } disabled:opacity-50`}
+                                className={`w-full py-3 px-6 border-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
+                                  isDarkMode
+                                    ? 'border-purple-500 text-purple-300 hover:bg-purple-500/20'
+                                    : 'border-purple-600 text-purple-600 hover:bg-purple-50'
+                                } disabled:opacity-50`}
                               >
                                 {addingToCart ? (
                                   <ShoppingCartIcon className="h-5 w-5 animate-pulse" />

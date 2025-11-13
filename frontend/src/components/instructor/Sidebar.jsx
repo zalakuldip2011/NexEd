@@ -103,7 +103,7 @@ const Sidebar = () => {
           <Link to="/instructor" className="flex items-center">
             <span className={`text-xl font-bold ${
               isDarkMode ? 'text-purple-400' : 'text-purple-600'
-            }`}>Edemy</span>
+            }`}>NexEd</span>
             <span className={`ml-2 text-sm ${
               isDarkMode ? 'text-slate-400' : 'text-gray-500'
             }`}>Instructor</span>

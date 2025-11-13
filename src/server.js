@@ -9,8 +9,8 @@ const app = require('./app');
 const logger = require('./courses/utils/logger.util');
 
 // Configuration
-const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/edemy_courses';
+const PORT = process.env.COURSE_SERVICE_PORT || 5001;
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/nexed';
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // MongoDB connection options
@@ -124,7 +124,7 @@ function startServer() {
  */
 async function initialize() {
   try {
-    logger.info('🎬 Starting Edemy Course Service...', {
+    logger.info('🎬 Starting NexEd Course Service...', {
       nodeVersion: process.version,
       platform: process.platform,
       environment: NODE_ENV

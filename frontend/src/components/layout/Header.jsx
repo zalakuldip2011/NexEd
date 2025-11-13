@@ -111,7 +111,7 @@ const Header = () => {
                   ? 'text-blue-400 hover:text-blue-300' 
                   : 'text-blue-600 hover:text-blue-700'
               }`}>
-                Edemy
+                NexEd
               </h1>
             </Link>
           </div>

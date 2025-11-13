@@ -76,25 +76,25 @@ const handleInstructorDeletion = async (user) => {
     
     // Create or find generic instructor account
     let genericInstructor = await User.findOne({ 
-      email: 'generic.instructor@edemy.com' 
+      email: 'generic.instructor@nexed.com' 
     });
     
     if (!genericInstructor) {
       console.log('📝 Creating generic instructor account...');
       genericInstructor = await User.create({
-        username: 'edemy_instructor',
-        email: 'generic.instructor@edemy.com',
+        username: 'nexed_instructor',
+        email: 'generic.instructor@nexed.com',
         password: require('crypto').randomBytes(32).toString('hex'), // Random password
         role: 'instructor',
         verification: {
           isEmailVerified: true
         },
         profile: {
-          firstName: 'Edemy',
+          firstName: 'NexEd',
           lastName: 'Instructor'
         },
         instructorProfile: {
-          bio: 'This is a generic Edemy instructor account for maintaining courses after original instructor account closure.',
+          bio: 'This is a generic NexEd instructor account for maintaining courses after original instructor account closure.',
           isApproved: true,
           approvedAt: new Date()
         }

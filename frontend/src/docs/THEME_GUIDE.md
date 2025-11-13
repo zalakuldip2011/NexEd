@@ -1,4 +1,4 @@
-# Theme Integration Guide for Edemy
+# Theme Integration Guide for NexEd
 
 This guide ensures that any new pages or components you add will automatically work with the light/dark mode system.
 

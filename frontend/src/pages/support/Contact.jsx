@@ -47,7 +47,7 @@ const Contact = () => {
     {
       icon: EnvelopeIcon,
       title: 'Email',
-      content: 'support@edemy.com',
+      content: 'support@nexed.com',
       description: 'Send us an email anytime',
     },
     {

@@ -930,7 +930,7 @@ const CourseExplorer = () => {
                     <p className={`text-sm mt-6 ${
                       isDarkMode ? 'text-slate-400' : 'text-gray-600'
                     }`}>
-                      Join over 10,000+ students learning on Edemy
+                      Join over 10,000+ students learning on NexEd
                     </p>
                   </div>
                 </motion.div>

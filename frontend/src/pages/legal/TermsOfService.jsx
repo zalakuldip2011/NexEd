@@ -40,7 +40,7 @@ const TermsOfService = () => {
               1. Acceptance of Terms
             </h2>
             <p className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
-              By accessing and using Edemy, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to these Terms of Service, please do not use our platform.
+              By accessing and using NexEd, you accept and agree to be bound by the terms and provision of this agreement. If you do not agree to these Terms of Service, please do not use our platform.
             </p>
           </section>
 
@@ -70,7 +70,7 @@ const TermsOfService = () => {
               2.2 Account Responsibilities
             </h3>
             <p className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
-              You are responsible for all activities that occur under your account. You agree to immediately notify Edemy of any unauthorized use of your account.
+              You are responsible for all activities that occur under your account. You agree to immediately notify NexEd of any unauthorized use of your account.
             </p>
           </section>
 
@@ -86,7 +86,7 @@ const TermsOfService = () => {
               3.1 License to Access Content
             </h3>
             <p className={`mb-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-              When you enroll in a course, Edemy grants you a limited, non-exclusive, non-transferable license to access and view the course content for your personal, non-commercial use.
+              When you enroll in a course, NexEd grants you a limited, non-exclusive, non-transferable license to access and view the course content for your personal, non-commercial use.
             </p>
 
             <h3 className={`text-xl font-semibold mb-3 ${
@@ -120,7 +120,7 @@ const TermsOfService = () => {
               4.1 Content Ownership
             </h3>
             <p className={`mb-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-              Instructors retain ownership of the content they create and upload. By publishing content on Edemy, instructors grant Edemy a worldwide, non-exclusive license to use, host, and distribute the content.
+              Instructors retain ownership of the content they create and upload. By publishing content on NexEd, instructors grant NexEd a worldwide, non-exclusive license to use, host, and distribute the content.
             </p>
 
             <h3 className={`text-xl font-semibold mb-3 ${
@@ -129,7 +129,7 @@ const TermsOfService = () => {
               4.2 Revenue Sharing
             </h3>
             <p className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
-              Instructors receive 70% of the revenue from course sales. Edemy retains 30% to cover platform costs, payment processing, and support services.
+              Instructors receive 70% of the revenue from course sales. NexEd retains 30% to cover platform costs, payment processing, and support services.
             </p>
           </section>
 
@@ -195,7 +195,7 @@ const TermsOfService = () => {
               7. Intellectual Property
             </h2>
             <p className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
-              All content on Edemy, including text, graphics, logos, and software, is the property of Edemy or its content suppliers and is protected by international copyright and intellectual property laws.
+              All content on NexEd, including text, graphics, logos, and software, is the property of NexEd or its content suppliers and is protected by international copyright and intellectual property laws.
             </p>
           </section>
 
@@ -206,7 +206,7 @@ const TermsOfService = () => {
               8. Disclaimer of Warranties
             </h2>
             <p className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
-              Edemy is provided "as is" and "as available" without warranties of any kind. We do not guarantee that the platform will be uninterrupted, secure, or error-free.
+              NexEd is provided "as is" and "as available" without warranties of any kind. We do not guarantee that the platform will be uninterrupted, secure, or error-free.
             </p>
           </section>
 
@@ -217,7 +217,7 @@ const TermsOfService = () => {
               9. Limitation of Liability
             </h2>
             <p className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
-              To the maximum extent permitted by law, Edemy shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the platform.
+              To the maximum extent permitted by law, NexEd shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the platform.
             </p>
           </section>
 
@@ -228,7 +228,7 @@ const TermsOfService = () => {
               10. Changes to Terms
             </h2>
             <p className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
-              We reserve the right to modify these terms at any time. We will notify users of significant changes via email or platform notification. Continued use of Edemy after changes constitutes acceptance of the new terms.
+              We reserve the right to modify these terms at any time. We will notify users of significant changes via email or platform notification. Continued use of NexEd after changes constitutes acceptance of the new terms.
             </p>
           </section>
 
@@ -242,10 +242,10 @@ const TermsOfService = () => {
               isDarkMode ? 'bg-gray-800' : 'bg-gray-100'
             }`}>
               <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                Edemy Legal Team
+                NexEd Legal Team
               </p>
               <p className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
-                Email: legal@edemy.com
+                Email: legal@nexed.com
               </p>
               <p className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
                 Address: [Your Business Address]

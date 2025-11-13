@@ -141,7 +141,7 @@ const TrustBadgesSection = () => {
             Ready to Start Learning?
           </h3>
           <p className="text-xl text-purple-100 mb-8">
-            Join 50,000+ students already learning on Edemy
+            Join 50,000+ students already learning on NexEd
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button className="px-8 py-4 bg-white text-purple-600 rounded-xl font-bold text-lg hover:bg-gray-100 transform hover:scale-105 transition-all duration-300 shadow-xl">

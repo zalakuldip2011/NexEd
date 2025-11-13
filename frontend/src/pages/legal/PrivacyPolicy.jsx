@@ -42,7 +42,7 @@ const PrivacyPolicy = () => {
               1. Introduction
             </h2>
             <p className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
-              At Edemy, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform. Please read this privacy policy carefully. If you do not agree with the terms of this privacy policy, please do not access the site.
+              At NexEd, we take your privacy seriously. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform. Please read this privacy policy carefully. If you do not agree with the terms of this privacy policy, please do not access the site.
             </p>
           </section>
 
@@ -164,7 +164,7 @@ const PrivacyPolicy = () => {
               <li>Withdraw consent</li>
             </ul>
             <p className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
-              To exercise these rights, please contact us at privacy@edemy.com
+              To exercise these rights, please contact us at privacy@nexed.com
             </p>
           </section>
 
@@ -214,10 +214,10 @@ const PrivacyPolicy = () => {
               isDarkMode ? 'bg-gray-800' : 'bg-gray-100'
             }`}>
               <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                Edemy Privacy Team
+                NexEd Privacy Team
               </p>
               <p className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
-                Email: privacy@edemy.com
+                Email: privacy@nexed.com
               </p>
               <p className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
                 Address: [Your Business Address]

@@ -231,20 +231,20 @@ All endpoints:
 ### 📧 Email Templates Added
 
 #### 1. Password Change OTP Email
-- **Subject:** "Verify Password Change - Edemy Account"
+- **Subject:** "Verify Password Change - NexEd Account"
 - **Design:** Orange/red gradient header
 - **Content:** 6-digit OTP code, expiry warning, security notice
 - **Format:** Responsive HTML with inline CSS
 
 #### 2. Account Deletion Request Email
-- **Subject:** "Account Deletion Request - Edemy"
+- **Subject:** "Account Deletion Request - NexEd"
 - **Design:** Red warning gradient header
 - **Content:** Scheduled date, grace period, warnings, cancellation instructions
 - **Special:** Instructor-specific warnings (conditional)
 - **Format:** Responsive HTML with inline CSS
 
 #### 3. Account Deleted Confirmation Email
-- **Subject:** "Account Permanently Deleted - Edemy"
+- **Subject:** "Account Permanently Deleted - NexEd"
 - **Design:** Green success gradient with checkmark
 - **Content:** Confirmation, list of deleted data, thank you message
 - **Format:** Responsive HTML with inline CSS
@@ -345,7 +345,7 @@ EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USER=your-email@gmail.com
 EMAIL_PASS=your-app-password
-EMAIL_FROM=noreply@edemy.com
+EMAIL_FROM=noreply@nexed.com
 CLIENT_URL=http://localhost:3000
 PORT=5000
 MONGODB_URI=mongodb://localhost:27017/edemy
@@ -453,15 +453,15 @@ All features work for both new and existing users.
 
 ### 👥 Contributors
 
-- Development Team: Edemy Platform
+- Development Team: NexEd Platform
 - Feature Request: User Profile Enhancements
 - Implementation: January 2024
 - Version: 1.0.0
 
 ### 📄 License
 
-This changelog is part of the Edemy Learning Platform.
-All rights reserved © 2024 Edemy.
+This changelog is part of the NexEd Learning Platform.
+All rights reserved © 2024 NexEd.
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Edemy now supports YouTube video integration for course content creation. This cost-effective solution allows instructors to host their videos on YouTube and embed them in their courses without the need for expensive video hosting services.
+NexEd now supports YouTube video integration for course content creation. This cost-effective solution allows instructors to host their videos on YouTube and embed them in their courses without the need for expensive video hosting services.
 
 ## How It Works
 
@@ -108,7 +108,7 @@ lectures: [{
 
 3. **Embedding: Allowed**
    - Essential for the integration to work
-   - Allows videos to be displayed in Edemy
+   - Allows videos to be displayed in NexEd
 
 ## API Endpoints
 

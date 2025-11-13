@@ -8,7 +8,7 @@ const FAQSection = () => {
 
   const faqs = [
     {
-      question: 'How do I get started with Edemy?',
+      question: 'How do I get started with NexEd?',
       answer: 'Getting started is easy! Simply create a free account, browse our course catalog, and enroll in any course that interests you. You can start learning immediately after enrollment.'
     },
     {
@@ -36,7 +36,7 @@ const FAQSection = () => {
       answer: 'Every course has a Q&A section where you can ask questions and get answers from instructors and fellow students. Premium courses also include direct instructor support.'
     },
     {
-      question: 'Can I become an instructor on Edemy?',
+      question: 'Can I become an instructor on NexEd?',
       answer: 'Yes! We welcome subject matter experts to become instructors. Click on "Become an Educator" to apply. Our team will review your application and guide you through the course creation process.'
     }
   ];

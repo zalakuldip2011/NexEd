@@ -28,7 +28,7 @@ import Wishlist from './pages/Wishlist';
 import Cart from './pages/Cart';
 import AuthenticatedHome from './pages/AuthenticatedHome';
 // About Pages
-import AboutEdemy from './pages/about/AboutEdemy';
+import AboutNexEd from './pages/about/AboutNexEd';
 import OurMission from './pages/about/OurMission';
 import Team from './pages/about/Team';
 // Teach Pages
@@ -63,7 +63,7 @@ const AnimatedRoutes = () => {
         <Route path="/reset-password" element={<ResetPassword />} />
         
         {/* About Pages - Public Access */}
-        <Route path="/about" element={<AboutEdemy />} />
+        <Route path="/about" element={<AboutNexEd />} />
         <Route path="/mission" element={<OurMission />} />
         <Route path="/team" element={<Team />} />
         

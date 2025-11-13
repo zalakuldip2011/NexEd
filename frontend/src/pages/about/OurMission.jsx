@@ -86,7 +86,7 @@ const OurMission = () => {
             <p className={`text-lg leading-relaxed mb-6 ${
               isDarkMode ? 'text-gray-300' : 'text-gray-700'
             }`}>
-              At Edemy, we believe that education is the most powerful tool for personal and societal transformation. 
+              At NexEd, we believe that education is the most powerful tool for personal and societal transformation. 
               In today's rapidly changing world, access to quality education should not be a privilege—it should be a right.
             </p>
             <p className={`text-lg leading-relaxed mb-6 ${

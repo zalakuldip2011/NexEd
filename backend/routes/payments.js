@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const {
+  createCheckoutSession,
+  verifyPayment,
   createPayment,
   confirmPayment,
   handleStripeWebhook,
@@ -13,6 +15,20 @@ const {
   generateReceipt
 } = require('../controllers/paymentController');
 const { auth, requireRole } = require('../middleware/auth');
+
+/**
+ * @route   POST /api/payments/checkout
+ * @desc    Create Stripe Checkout Session
+ * @access  Private (Student)
+ */
+router.post('/checkout', auth, createCheckoutSession);
+
+/**
+ * @route   POST /api/payments/verify
+ * @desc    Verify payment after Stripe Checkout
+ * @access  Private (Student)
+ */
+router.post('/verify', auth, verifyPayment);
 
 /**
  * @route   POST /api/payments/create

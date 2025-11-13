@@ -1,5 +1,6 @@
 {
-  "name": "edemy-frontend",
+  "name": "nexed-frontend",
+  "description": "NexEd – Empowering the Next Generation of Learners - Frontend Application",
   "version": "0.1.0",
   "private": true,
   "dependencies": {

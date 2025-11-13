@@ -94,7 +94,7 @@ app.use('/api/wishlist', require('./routes/wishlist'));
 app.get('/', (req, res) => {
   res.json({ 
     success: true,
-    message: 'Edemy Backend API',
+    message: 'NexEd Backend API',
     version: '1.0.0',
     status: 'Running',
     timestamp: new Date().toISOString()

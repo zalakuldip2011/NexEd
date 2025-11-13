@@ -7,6 +7,223 @@ const Enrollment = require('../models/Enrollment');
 // npm install stripe @paypal/checkout-server-sdk
 
 /**
+ * @desc    Create Stripe Checkout Session
+ * @route   POST /api/payments/checkout
+ * @access  Private (Student)
+ */
+exports.createCheckoutSession = async (req, res) => {
+  try {
+    const { courseIds, successUrl, cancelUrl } = req.body;
+    const studentId = req.user.id;
+
+    if (!courseIds || courseIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Course IDs are required'
+      });
+    }
+
+    // Fetch all courses
+    const courses = await Course.find({ _id: { $in: courseIds } }).populate('instructor');
+
+    if (courses.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No courses found'
+      });
+    }
+
+    // Validate courses
+    for (const course of courses) {
+      if (course.status !== 'published') {
+        return res.status(400).json({
+          success: false,
+          message: `Course "${course.title}" is not available for purchase`
+        });
+      }
+
+      if (course.instructor._id.toString() === studentId) {
+        return res.status(400).json({
+          success: false,
+          message: `You cannot purchase your own course "${course.title}"`
+        });
+      }
+
+      // Check if already enrolled
+      const existingEnrollment = await Enrollment.findOne({
+        student: studentId,
+        course: course._id
+      });
+
+      if (existingEnrollment) {
+        return res.status(400).json({
+          success: false,
+          message: `You are already enrolled in "${course.title}"`
+        });
+      }
+    }
+
+    // Initialize Stripe
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+    // Create line items for Stripe Checkout
+    const lineItems = courses.map(course => {
+      const price = course.price || 0;
+      const discount = course.discount || 0;
+      const finalPrice = price * (1 - discount / 100);
+
+      return {
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: course.title,
+            description: course.description?.substring(0, 500) || 'No description',
+            images: course.thumbnail ? [course.thumbnail] : []
+          },
+          unit_amount: Math.round(finalPrice * 100) // Convert to cents
+        },
+        quantity: 1
+      };
+    });
+
+    // Create Stripe Checkout Session
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: lineItems,
+      mode: 'payment',
+      success_url: successUrl || `${process.env.FRONTEND_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: cancelUrl || `${process.env.FRONTEND_URL}/payment/cancel`,
+      client_reference_id: studentId,
+      metadata: {
+        studentId: studentId,
+        courseIds: courseIds.join(','),
+        timestamp: new Date().toISOString()
+      }
+    });
+
+    // Create payment records for each course
+    for (const course of courses) {
+      const price = course.price || 0;
+      const discount = course.discount || 0;
+      const finalPrice = price * (1 - discount / 100);
+
+      await Payment.create({
+        student: studentId,
+        course: course._id,
+        instructor: course.instructor._id,
+        amount: finalPrice,
+        currency: 'usd',
+        provider: 'stripe',
+        providerPaymentId: session.id,
+        status: 'pending',
+        metadata: {
+          courseTitle: course.title,
+          studentEmail: req.user.email,
+          checkoutSessionId: session.id
+        }
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      sessionId: session.id,
+      url: session.url
+    });
+
+  } catch (error) {
+    console.error('Create checkout session error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while creating checkout session',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Verify payment after Stripe Checkout
+ * @route   POST /api/payments/verify
+ * @access  Private (Student)
+ */
+exports.verifyPayment = async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Session ID is required'
+      });
+    }
+
+    // Initialize Stripe
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+    // Retrieve session
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.payment_status !== 'paid') {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment not completed',
+        status: session.payment_status
+      });
+    }
+
+    // Find and update payment records
+    const payments = await Payment.find({
+      providerPaymentId: sessionId,
+      status: 'pending'
+    }).populate('course');
+
+    if (payments.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No pending payments found for this session'
+      });
+    }
+
+    // Update payments and create enrollments
+    const enrollments = [];
+    for (const payment of payments) {
+      // Update payment status
+      payment.status = 'completed';
+      payment.paidAt = new Date();
+      payment.providerResponse = session;
+      await payment.save();
+
+      // Create enrollment
+      const enrollment = await Enrollment.create({
+        student: payment.student,
+        course: payment.course._id,
+        enrolledAt: new Date(),
+        progress: {
+          completedLectures: [],
+          percentage: 0
+        }
+      });
+
+      enrollments.push(enrollment);
+    }
+
+    res.json({
+      success: true,
+      message: 'Payment verified and enrollments created',
+      payments,
+      enrollments
+    });
+
+  } catch (error) {
+    console.error('Verify payment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error while verifying payment',
+      error: error.message
+    });
+  }
+};
+
+/**
  * @desc    Create payment intent (Stripe) or order (PayPal)
  * @route   POST /api/payments/create
  * @access  Private (Student)
@@ -162,7 +379,7 @@ exports.createPayment = async (req, res) => {
           description: `Purchase of ${course.title}`
         }],
         application_context: {
-          brand_name: 'Edemy',
+          brand_name: 'NexEd',
           landing_page: 'NO_PREFERENCE',
           user_action: 'PAY_NOW',
           return_url: `${process.env.FRONTEND_URL}/payment/success`,

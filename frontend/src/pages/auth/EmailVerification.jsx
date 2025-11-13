@@ -259,8 +259,8 @@ const EmailVerification = () => {
           </p>
           <p className="theme-text-tertiary text-sm mt-1">
             Need help? Contact us at{' '}
-            <a href="mailto:support@edemy.com" className="theme-text-accent hover:opacity-80">
-              support@edemy.com
+            <a href="mailto:support@nexed.com" className="theme-text-accent hover:opacity-80">
+              support@nexed.com
             </a>
           </p>
         </div>

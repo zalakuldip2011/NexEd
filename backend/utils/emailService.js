@@ -4,8 +4,8 @@ class EmailService {
   constructor() {
     this.transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST,
-      port: process.env.EMAIL_PORT,
-      secure: false, // true for 465, false for other ports
+      port: parseInt(process.env.EMAIL_PORT),
+      secure: process.env.EMAIL_PORT == 465, // true for 465, false for other ports
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
@@ -20,21 +20,34 @@ class EmailService {
   async sendOTPEmail(email, username, otp) {
     const mailOptions = {
       from: {
-        name: 'Edemy Platform',
+        name: 'NexEd Platform',
         address: process.env.EMAIL_FROM || process.env.EMAIL_USER
       },
       to: email,
-      subject: 'Verify Your Email - Edemy Account',
+      subject: 'Verify Your Email - NexEd Account',
       html: this.getOTPEmailTemplate(username, otp)
     };
 
     try {
+      console.log(`Attempting to send OTP email to: ${email}`);
       const info = await this.transporter.sendMail(mailOptions);
-      console.log('OTP email sent:', info.messageId);
+      console.log('✅ OTP email sent successfully:', info.messageId);
+      console.log('Recipient:', email);
       return { success: true, messageId: info.messageId };
     } catch (error) {
-      console.error('Error sending OTP email:', error);
-      throw new Error('Failed to send verification email');
+      console.error('❌ Error sending OTP email to:', email);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      
+      if (error.code === 'EENVELOPE') {
+        throw new Error('Invalid email address format');
+      } else if (error.code === 'EAUTH') {
+        throw new Error('Email authentication failed. Check EMAIL_USER and EMAIL_PASS');
+      } else if (error.responseCode === 550) {
+        throw new Error('Email address rejected by recipient server');
+      } else {
+        throw new Error(`Failed to send verification email: ${error.message}`);
+      }
     }
   }
 
@@ -42,11 +55,11 @@ class EmailService {
   async sendWelcomeEmail(email, username) {
     const mailOptions = {
       from: {
-        name: 'Edemy Platform',
+        name: 'NexEd Platform',
         address: process.env.EMAIL_FROM || process.env.EMAIL_USER
       },
       to: email,
-      subject: 'Welcome to Edemy! 🎉',
+      subject: 'Welcome to NexEd! 🎉',
       html: this.getWelcomeEmailTemplate(username)
     };
 
@@ -65,21 +78,36 @@ class EmailService {
   async sendPasswordResetEmail(email, username, otp) {
     const mailOptions = {
       from: {
-        name: 'Edemy Platform',
+        name: 'NexEd Platform',
         address: process.env.EMAIL_FROM || process.env.EMAIL_USER
       },
       to: email,
-      subject: 'Reset Your Password - Edemy Account',
+      subject: 'Reset Your Password - NexEd Account',
       html: this.getPasswordResetEmailTemplate(username, otp)
     };
 
     try {
+      console.log(`Attempting to send password reset email to: ${email}`);
       const info = await this.transporter.sendMail(mailOptions);
-      console.log('Password reset email sent:', info.messageId);
+      console.log('✅ Password reset email sent successfully:', info.messageId);
+      console.log('Recipient:', email);
       return { success: true, messageId: info.messageId };
     } catch (error) {
-      console.error('Error sending password reset email:', error);
-      throw new Error('Failed to send password reset email');
+      console.error('❌ Error sending password reset email to:', email);
+      console.error('Error code:', error.code);
+      console.error('Error message:', error.message);
+      console.error('Full error:', error);
+      
+      // Provide more specific error message
+      if (error.code === 'EENVELOPE') {
+        throw new Error('Invalid email address format');
+      } else if (error.code === 'EAUTH') {
+        throw new Error('Email authentication failed. Check EMAIL_USER and EMAIL_PASS');
+      } else if (error.responseCode === 550) {
+        throw new Error('Email address rejected by recipient server');
+      } else {
+        throw new Error(`Failed to send password reset email: ${error.message}`);
+      }
     }
   }
 
@@ -87,11 +115,11 @@ class EmailService {
   async sendPasswordChangeOTPEmail(email, username, otp) {
     const mailOptions = {
       from: {
-        name: 'Edemy Platform',
+        name: 'NexEd Platform',
         address: process.env.EMAIL_FROM || process.env.EMAIL_USER
       },
       to: email,
-      subject: 'Verify Password Change - Edemy Account',
+      subject: 'Verify Password Change - NexEd Account',
       html: this.getPasswordChangeOTPEmailTemplate(username, otp)
     };
 
@@ -109,11 +137,11 @@ class EmailService {
   async sendAccountDeletionEmail(email, username, deletionDate, hasPublishedCourses) {
     const mailOptions = {
       from: {
-        name: 'Edemy Platform',
+        name: 'NexEd Platform',
         address: process.env.EMAIL_FROM || process.env.EMAIL_USER
       },
       to: email,
-      subject: 'Account Deletion Request - Edemy',
+      subject: 'Account Deletion Request - NexEd',
       html: this.getAccountDeletionEmailTemplate(username, deletionDate, hasPublishedCourses)
     };
 
@@ -245,7 +273,7 @@ class EmailService {
       <body>
         <div class="container">
           <div class="header">
-            <div class="logo">📚 Edemy</div>
+            <div class="logo">📚 NexEd</div>
             <div class="header-text">Your Learning Journey Starts Here</div>
           </div>
           
@@ -253,7 +281,7 @@ class EmailService {
             <div class="greeting">Hello ${username}! 👋</div>
             
             <div class="message">
-              Thank you for signing up with Edemy! To complete your registration and secure your account, 
+              Thank you for signing up with NexEd! To complete your registration and secure your account, 
               please verify your email address using the OTP code below.
             </div>
             
@@ -282,10 +310,10 @@ class EmailService {
           
           <div class="footer">
             <div class="footer-text">
-              If you didn't create an account with Edemy, please ignore this email.
+              If you didn't create an account with NexEd, please ignore this email.
             </div>
             <div class="footer-text">
-              Need help? Contact us at support@edemy.com
+              Need help? Contact us at support@nexed.com
             </div>
           </div>
         </div>
@@ -302,7 +330,7 @@ class EmailService {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Welcome to Edemy</title>
+        <title>Welcome to NexEd</title>
         <style>
           * {
             margin: 0;
@@ -394,7 +422,7 @@ class EmailService {
       <body>
         <div class="container">
           <div class="header">
-            <div class="logo">🎉 Welcome to Edemy!</div>
+            <div class="logo">🎉 Welcome to NexEd!</div>
             <div class="header-text">Your learning adventure begins now</div>
           </div>
           
@@ -402,7 +430,7 @@ class EmailService {
             <div class="greeting">Hello ${username}!</div>
             
             <div class="message">
-              Congratulations! Your email has been verified and your Edemy account is now active. 
+              Congratulations! Your email has been verified and your NexEd account is now active. 
               We're excited to have you join our community of learners and educators.
             </div>
             
@@ -443,7 +471,7 @@ class EmailService {
           
           <div class="footer">
             <div class="footer-text">
-              Questions? We're here to help! Contact us at support@edemy.com
+              Questions? We're here to help! Contact us at support@nexed.com
             </div>
           </div>
         </div>
@@ -570,7 +598,7 @@ class EmailService {
       <body>
         <div class="container">
           <div class="header">
-            <div class="logo">🔒 Edemy</div>
+            <div class="logo">🔒 NexEd</div>
             <div class="header-text">Password Reset Request</div>
           </div>
           
@@ -578,7 +606,7 @@ class EmailService {
             <div class="greeting">Hello ${username}! 👋</div>
             
             <div class="message">
-              We received a request to reset your password for your Edemy account. 
+              We received a request to reset your password for your NexEd account. 
               Use the verification code below to set a new password.
             </div>
             
@@ -609,7 +637,7 @@ class EmailService {
               If you didn't request a password reset, please ignore this email.
             </div>
             <div class="footer-text">
-              Need help? Contact us at support@edemy.com
+              Need help? Contact us at support@nexed.com
             </div>
           </div>
         </div>
@@ -644,7 +672,7 @@ class EmailService {
       <body>
         <div class="container">
           <div class="header">
-            <div class="logo">🔐 Edemy</div>
+            <div class="logo">🔐 NexEd</div>
           </div>
           <div class="content">
             <div class="greeting">Hello ${username}!</div>
@@ -655,7 +683,7 @@ class EmailService {
             <div class="message">This code expires in 10 minutes. If you didn't request this, please ignore this email.</div>
           </div>
           <div class="footer">
-            <div style="color: #64748b; font-size: 14px;">© ${new Date().getFullYear()} Edemy. All rights reserved.</div>
+            <div style="color: #64748b; font-size: 14px;">© ${new Date().getFullYear()} NexEd. All rights reserved.</div>
           </div>
         </div>
       </body>
@@ -703,7 +731,7 @@ class EmailService {
             <h2 style="color: #f8fafc; margin-bottom: 20px;">Hello ${username},</h2>
             
             <p style="color: #cbd5e1; font-size: 16px; margin-bottom: 25px;">
-              We've received your request to permanently delete your Edemy account. We're sorry to see you go!
+              We've received your request to permanently delete your NexEd account. We're sorry to see you go!
             </p>
             
             <div class="warning-box">
@@ -723,7 +751,7 @@ class EmailService {
               <div class="warning-text">
                 You are an instructor with published courses. Please note:<br>
                 • Courses with enrollments cannot be deleted (lifetime guarantee)<br>
-                • Your courses will be transferred to a generic Edemy instructor account<br>
+                • Your courses will be transferred to a generic NexEd instructor account<br>
                 • No new enrollments will be accepted after account closure<br>
                 • Enrolled learners will continue to have access to your courses
               </div>
@@ -734,7 +762,7 @@ class EmailService {
               <h3 style="color: #93c5fd; margin-bottom: 10px;">🕐 14-Day Grace Period</h3>
               <p style="color: #cbd5e1;">
                 You have <strong>14 days</strong> to change your mind. To cancel this deletion request, 
-                please contact us at <strong>privacy@edemy.com</strong> before the scheduled deletion date.
+                please contact us at <strong>privacy@nexed.com</strong> before the scheduled deletion date.
               </p>
             </div>
             
@@ -743,14 +771,14 @@ class EmailService {
             </p>
             
             <div style="text-align: center; margin-top: 30px;">
-              <a href="mailto:privacy@edemy.com" class="cta-button">
+              <a href="mailto:privacy@nexed.com" class="cta-button">
                 Cancel Deletion Request
               </a>
             </div>
           </div>
           <div style="background: #1e293b; padding: 30px; text-align: center; border-top: 1px solid #334155;">
             <div style="color: #64748b; font-size: 14px;">
-              For questions or concerns, contact us at privacy@edemy.com
+              For questions or concerns, contact us at privacy@nexed.com
             </div>
           </div>
         </div>
@@ -763,11 +791,11 @@ class EmailService {
   async sendAccountDeletedEmail(email, username) {
     const mailOptions = {
       from: {
-        name: 'Edemy Platform',
+        name: 'NexEd Platform',
         address: process.env.EMAIL_FROM || process.env.EMAIL_USER
       },
       to: email,
-      subject: 'Account Permanently Deleted - Edemy',
+      subject: 'Account Permanently Deleted - NexEd',
       html: this.getAccountDeletedEmailTemplate(username)
     };
 
@@ -815,7 +843,7 @@ class EmailService {
             <p class="message">Hello <strong>${username}</strong>,</p>
             
             <p class="message">
-              This email confirms that your Edemy account has been permanently deleted as requested.
+              This email confirms that your NexEd account has been permanently deleted as requested.
             </p>
             
             <div class="info-box">
@@ -830,22 +858,22 @@ class EmailService {
             </div>
             
             <p class="message">
-              <strong>Important:</strong> This action is permanent and cannot be undone. If you wish to use Edemy 
+              <strong>Important:</strong> This action is permanent and cannot be undone. If you wish to use NexEd 
               again in the future, you'll need to create a new account with a different email address.
             </p>
             
             <p class="message">
               We're sorry to see you go. If there's anything we could have done better, we'd love to hear your 
-              feedback at <strong>feedback@edemy.com</strong>.
+              feedback at <strong>feedback@nexed.com</strong>.
             </p>
             
             <p class="message">
-              Thank you for being part of the Edemy learning community!
+              Thank you for being part of the NexEd learning community!
             </p>
           </div>
           <div style="background: #1e293b; padding: 30px; text-align: center; border-top: 1px solid #334155;">
             <div style="color: #64748b; font-size: 14px;">
-              © ${new Date().getFullYear()} Edemy. All rights reserved.
+              © ${new Date().getFullYear()} NexEd. All rights reserved.
             </div>
           </div>
         </div>

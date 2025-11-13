@@ -19,13 +19,13 @@ const Footer = () => {
     {
       title: "About Us",
       links: [
-        { name: "About Edemy", href: "/about" },
+        { name: "About NexEd", href: "/about" },
         { name: "Our Mission", href: "/mission" },
         { name: "Team", href: "/team" }
       ]
     },
     {
-      title: "Teach on Edemy",
+      title: "Teach on NexEd",
       links: [
         { name: "Become an Instructor", href: "/teach" },
         { name: "Instructor Dashboard", href: "/instructor/dashboard" },
@@ -98,7 +98,7 @@ const Footer = () => {
                 isDarkMode ? 'text-white' : 'text-gray-900'
               }`}>
                 {section.title === "About Us" && <AcademicCapIcon className={`h-5 w-5 mr-2 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />}
-                {section.title === "Teach on Edemy" && <UserGroupIcon className={`h-5 w-5 mr-2 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />}
+                {section.title === "Teach on NexEd" && <UserGroupIcon className={`h-5 w-5 mr-2 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />}
                 {section.title === "Support" && <QuestionMarkCircleIcon className={`h-5 w-5 mr-2 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />}
                 {section.title === "Legal" && <ShieldCheckIcon className={`h-5 w-5 mr-2 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />}
                 {section.title}
@@ -223,11 +223,11 @@ const Footer = () => {
           <div className="flex flex-col md:flex-row items-center justify-between">
             {/* Logo and Copyright */}
             <div className="flex items-center mb-4 md:mb-0">
-              <h2 className={`text-2xl font-bold mr-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>Edemy</h2>
+              <h2 className={`text-2xl font-bold mr-4 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`}>NexEd</h2>
               <span className={`text-sm transition-colors ${
                 isDarkMode ? 'text-gray-400' : 'text-gray-600'
               }`}>
-                © 2025 Edemy. All rights reserved.
+                © 2025 NexEd. All rights reserved.
               </span>
             </div>
 

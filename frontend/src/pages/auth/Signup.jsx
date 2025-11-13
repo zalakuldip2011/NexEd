@@ -165,7 +165,7 @@ const Signup = () => {
         {/* Header */}
         <div className="text-center">
           <Link to="/" className="inline-block">
-            <h1 className="text-4xl font-bold theme-text-accent mb-2">Edemy</h1>
+            <h1 className="text-4xl font-bold theme-text-accent mb-2">NexEd</h1>
           </Link>
           <h2 className="text-3xl font-bold theme-text-primary mb-2">Create your account</h2>
           <p className="theme-text-tertiary">Join millions of learners worldwide</p>
@@ -454,7 +454,7 @@ const Signup = () => {
 
         {/* Benefits */}
         <div className="text-center">
-          <p className="text-sm theme-text-tertiary mb-4">Join Edemy and get access to:</p>
+          <p className="text-sm theme-text-tertiary mb-4">Join NexEd and get access to:</p>
           <div className="flex justify-center space-x-6 text-xs theme-text-tertiary">
             <span>✓ 1000+ Premium Courses</span>
             <span>✓ Expert Instructors</span>

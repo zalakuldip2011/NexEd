@@ -135,7 +135,7 @@ const Login = () => {
         {/* Header */}
         <div className="text-center">
           <Link to="/" className="inline-block">
-            <h1 className="text-4xl font-bold mb-2 theme-text-accent">Edemy</h1>
+            <h1 className="text-4xl font-bold mb-2 theme-text-accent">NexEd</h1>
           </Link>
           <h2 className="text-3xl font-bold mb-2 theme-text-primary">Welcome back</h2>
           <p className="theme-text-tertiary">Sign in to continue your learning journey</p>

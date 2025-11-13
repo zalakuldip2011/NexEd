@@ -24,7 +24,7 @@ const HelpCenter = () => {
     {
       icon: BookOpenIcon,
       title: 'Getting Started',
-      description: 'Learn the basics of using Edemy',
+      description: 'Learn the basics of using NexEd',
       link: '#getting-started',
       articles: 12,
     },
@@ -51,7 +51,7 @@ const HelpCenter = () => {
     },
     {
       icon: UserGroupIcon,
-      title: 'Teaching on Edemy',
+      title: 'Teaching on NexEd',
       description: 'Create and publish your courses',
       link: '#teaching',
       articles: 18,
@@ -84,7 +84,7 @@ const HelpCenter = () => {
     {
       question: 'How do I become an instructor?',
       answer:
-        'To become an instructor, click on "Teach on Edemy" in the footer, then click "Become an Instructor" and fill out the application form. Our team will review your application within 3-5 business days. Once approved, you can start creating courses.',
+        'To become an instructor, click on "Teach on NexEd" in the footer, then click "Become an Instructor" and fill out the application form. Our team will review your application within 3-5 business days. Once approved, you can start creating courses.',
     },
     {
       question: 'Do I get a certificate after completing a course?',
@@ -94,7 +94,7 @@ const HelpCenter = () => {
     {
       question: 'Can I access courses on mobile devices?',
       answer:
-        'Absolutely! Edemy is fully responsive and works on all devices including smartphones, tablets, and desktop computers. Simply log in to your account from any device to access your courses.',
+        'Absolutely! NexEd is fully responsive and works on all devices including smartphones, tablets, and desktop computers. Simply log in to your account from any device to access your courses.',
     },
     {
       question: 'How long do I have access to a course after purchase?',
@@ -121,7 +121,7 @@ const HelpCenter = () => {
     },
     {
       title: 'Instructor Revenue Share Explained',
-      category: 'Teaching on Edemy',
+      category: 'Teaching on NexEd',
       views: '8.7K',
     },
     {

@@ -1,4 +1,4 @@
-# 🎨 Edemy UI Component Library
+# 🎨 NexEd UI Component Library
 
 Beautiful Material UI-inspired component library built with React and Tailwind CSS. Designed for **butter-smooth** animations, professional aesthetics, and seamless dark/light mode support.
 
@@ -529,4 +529,4 @@ MIT License - Use freely in your projects!
 
 ## 🎉 Happy Coding!
 
-Built with ❤️ for the Edemy project.
+Built with ❤️ for the NexEd project.
