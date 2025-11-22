@@ -3,6 +3,11 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useToast } from '../../context/ToastContext';
+import { useWishlist } from '../../context/WishlistContext';
+import { useCart } from '../../context/CartContext';
+import { openRazorpayCheckout, formatAmount } from '../../utils/razorpay';
+import paymentService from '../../services/paymentService';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import {
@@ -22,7 +27,9 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   HeartIcon,
-  ShoppingCartIcon
+  ShoppingCartIcon,
+  CreditCardIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolid, HeartIcon as HeartSolid } from '@heroicons/react/24/solid';
 
@@ -31,6 +38,9 @@ const CourseDetails = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isDarkMode } = useTheme();
+  const toast = useToast();
+  const { wishlistItems, toggleWishlist: toggleWishlistContext } = useWishlist();
+  const { cartItems, addToCart: addToCartContext } = useCart();
   
   const [course, setCourse] = useState(null);
   const [relatedCourses, setRelatedCourses] = useState([]);
@@ -41,10 +51,14 @@ const CourseDetails = () => {
   const [showLectureModal, setShowLectureModal] = useState(false);
   const [selectedLecture, setSelectedLecture] = useState(null);
   const [carouselIndex, setCarouselIndex] = useState(0);
-  const [isInWishlist, setIsInWishlist] = useState(false);
-  const [isInCart, setIsInCart] = useState(false);
   const [togglingWishlist, setTogglingWishlist] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [processingPayment, setProcessingPayment] = useState(false);
+
+  // Compute state from contexts
+  const isInWishlist = wishlistItems.some(item => (item.course?._id || item.course) === courseId);
+  const isInCart = cartItems.some(item => (item.course?._id || item.course) === courseId);
 
   useEffect(() => {
     fetchCourseDetails();
@@ -81,21 +95,19 @@ const CourseDetails = () => {
       }
       
       // Check enrollment status if user is logged in
-      if (user && user.role === 'student') {
-        const enrollmentRes = await fetch(`/api/enrollments`, {
-          credentials: 'include'
-        });
-        
-        if (enrollmentRes.ok) {
-          const enrollmentData = await enrollmentRes.json();
+      if (user) {
+        try {
+          const enrollmentRes = await fetch(`/api/enroll/check/${courseId}`, {
+            credentials: 'include'
+          });
           
-          if (enrollmentData.success && enrollmentData.enrollments) {
-            // Check if user is enrolled in this course
-            const enrolled = enrollmentData.enrollments.some(
-              e => (e.course._id || e.course) === courseId
-            );
-            setIsEnrolled(enrolled);
+          if (enrollmentRes.ok) {
+            const enrollmentData = await enrollmentRes.json();
+            setIsEnrolled(enrollmentData.enrolled || false);
           }
+        } catch (error) {
+          console.error('Error checking enrollment:', error);
+          setIsEnrolled(false);
         }
       }
     } catch (error) {
@@ -112,37 +124,134 @@ const CourseDetails = () => {
       return;
     }
 
-    if (user.role !== 'student') {
-      alert('Only students can enroll in courses');
-      return;
-    }
-
     try {
       setEnrolling(true);
       
-      const response = await fetch('/api/enrollments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
-        body: JSON.stringify({ courseId })
+      // ✅ FIRST: Check if already enrolled
+      const enrollmentCheck = await fetch(`/api/enroll/check/${courseId}`, {
+        credentials: 'include'
       });
       
-      const data = await response.json();
+      if (enrollmentCheck.ok) {
+        const enrollmentData = await enrollmentCheck.json();
+        if (enrollmentData.enrolled) {
+          // User is already enrolled - redirect to course
+          toast.success('You are already enrolled in this course!');
+          navigate(`/learn/${courseId}`);
+          return;
+        }
+      }
       
-      if (data.success) {
-        setIsEnrolled(true);
-        alert('Successfully enrolled! Redirecting to course...');
-        navigate(`/learn/${courseId}`);
+      // Check if course is free or paid
+      if (!course.price || course.price === 0) {
+        // Free course - direct enrollment
+        const orderResponse = await paymentService.createOrder({ courseId });
+        
+        if (orderResponse.success && orderResponse.isFree) {
+          setIsEnrolled(true);
+          toast.success('Successfully enrolled in free course!');
+          navigate(`/learn/${courseId}`);
+        } else {
+          toast.error(orderResponse.message || 'Failed to enroll');
+        }
       } else {
-        alert(data.message || 'Failed to enroll in course');
+        // Paid course - show payment modal
+        setShowPaymentModal(true);
       }
     } catch (error) {
       console.error('Error enrolling:', error);
-      alert('Failed to enroll in course');
+      toast.error('Failed to enroll in course');
     } finally {
       setEnrolling(false);
+    }
+  };
+
+  const handlePayment = async () => {
+    try {
+      setProcessingPayment(true);
+      
+      // ✅ DOUBLE CHECK: Verify not enrolled before payment
+      const enrollmentCheck = await fetch(`/api/enroll/check/${courseId}`, {
+        credentials: 'include'
+      });
+      
+      if (enrollmentCheck.ok) {
+        const enrollmentData = await enrollmentCheck.json();
+        if (enrollmentData.enrolled) {
+          toast.success('You are already enrolled in this course!');
+          setShowPaymentModal(false);
+          navigate(`/learn/${courseId}`);
+          return;
+        }
+      }
+      
+      toast.info('Creating payment order...');
+
+      // Step 1: Create Razorpay order
+      const orderResponse = await paymentService.createOrder({ courseId });
+      
+      if (!orderResponse.success) {
+        throw new Error(orderResponse.message || 'Failed to create order');
+      }
+
+      const { order, razorpayKeyId, courseDetails } = orderResponse;
+
+      // Step 2: Open Razorpay checkout
+      const paymentResult = await openRazorpayCheckout({
+        keyId: razorpayKeyId,
+        orderId: order.orderId,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'NexEd',
+        description: courseDetails[0]?.title || 'Course Purchase',
+        image: '/logo192.png',
+        prefill: {
+          name: user.username || user.email?.split('@')[0],
+          email: user.email,
+          contact: user.phone || ''
+        },
+        theme: {
+          color: isDarkMode ? '#6366f1' : '#3b82f6'
+        },
+        notes: {
+          courseId: courseId,
+          userId: user.id
+        }
+      });
+
+      // Step 3: Verify payment on backend
+      toast.info('Verifying payment...');
+      
+      const verifyResponse = await paymentService.verifyPayment({
+        razorpay_order_id: paymentResult.razorpay_order_id,
+        razorpay_payment_id: paymentResult.razorpay_payment_id,
+        razorpay_signature: paymentResult.razorpay_signature,
+        courseIds: [courseId]
+      });
+
+      if (verifyResponse.success && verifyResponse.verified) {
+        setIsEnrolled(true);
+        setShowPaymentModal(false);
+        toast.success('Payment successful! Enrollment completed.');
+        
+        // Redirect to course player after 1 second
+        setTimeout(() => {
+          navigate(`/learn/${courseId}`);
+        }, 1000);
+      } else {
+        throw new Error('Payment verification failed');
+      }
+
+    } catch (error) {
+      console.error('Payment error:', error);
+      
+      if (error.message === 'Payment cancelled by user') {
+        toast.info('Payment cancelled');
+      } else {
+        toast.error(error.message || 'Payment failed. Please try again.');
+      }
+    } finally {
+      setProcessingPayment(false);
     }
   };
 
@@ -154,28 +263,11 @@ const CourseDetails = () => {
 
     try {
       setTogglingWishlist(true);
-      const token = localStorage.getItem('token');
-
-      if (isInWishlist) {
-        await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/wishlist/${courseId}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        setIsInWishlist(false);
-      } else {
-        await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/wishlist`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ courseId })
-        });
-        setIsInWishlist(true);
-      }
+      await toggleWishlistContext(courseId);
+      toast.success('Wishlist updated!');
     } catch (error) {
-      console.error('Error toggling wishlist:', error);
-      alert('Failed to update wishlist');
+      console.error('[CourseDetails] Error toggling wishlist:', error);
+      toast.error(error.message || 'Failed to update wishlist');
     } finally {
       setTogglingWishlist(false);
     }
@@ -189,25 +281,11 @@ const CourseDetails = () => {
 
     try {
       setAddingToCart(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/cart`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ courseId })
-      });
-      const data = await response.json();
-      if (data.success) {
-        setIsInCart(true);
-        alert('Course added to cart!');
-      } else {
-        alert(data.message || 'Failed to add to cart');
-      }
+      await addToCartContext(courseId);
+      toast.success('Course added to cart!');
     } catch (error) {
       console.error('Error adding to cart:', error);
-      alert('Failed to add to cart');
+      toast.error(error.message || 'Failed to add to cart');
     } finally {
       setAddingToCart(false);
     }
@@ -387,14 +465,14 @@ const CourseDetails = () => {
                           <div className={`text-3xl font-bold ${
                             isDarkMode ? 'text-white' : 'text-gray-900'
                           }`}>
-                            ${course.price}
+                            ₹{course.price}
                           </div>
                           {course.originalPrice > course.price && (
                             <div className="flex items-center mt-2">
                               <span className={`text-lg line-through ${
                                 isDarkMode ? 'text-slate-400' : 'text-gray-400'
                               }`}>
-                                ${course.originalPrice}
+                                ₹{course.originalPrice}
                               </span>
                               <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded">
                                 {course.discount}% OFF
@@ -408,9 +486,9 @@ const CourseDetails = () => {
                     {isEnrolled ? (
                       <Link
                         to={`/learn/${courseId}`}
-                        className="block w-full py-3 px-6 text-center bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-lg shadow-lg transition-all"
+                        className="block w-full py-3 px-6 text-center bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg shadow-lg transition-all"
                       >
-                        Continue Learning
+                        🎓 Go to Course
                       </Link>
                     ) : (
                       <div className="space-y-3">
@@ -858,7 +936,7 @@ const CourseDetails = () => {
                                   }`}>
                                     {relatedCourses[carouselIndex].price === 0 
                                       ? 'Free' 
-                                      : `$${relatedCourses[carouselIndex].price}`}
+                                      : `₹${relatedCourses[carouselIndex].price}`}
                                   </span>
                                 </div>
                               </div>
@@ -1071,6 +1149,160 @@ const CourseDetails = () => {
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* Payment Modal */}
+      <AnimatePresence>
+        {showPaymentModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => !processingPayment && setShowPaymentModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              transition={{ type: 'spring', damping: 25 }}
+              className={`relative w-full max-w-md rounded-2xl shadow-2xl ${
+                isDarkMode ? 'bg-gray-800' : 'bg-white'
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Close Button */}
+              {!processingPayment && (
+                <button
+                  onClick={() => setShowPaymentModal(false)}
+                  className={`absolute top-4 right-4 p-2 rounded-full transition-colors ${
+                    isDarkMode 
+                      ? 'hover:bg-gray-700 text-gray-400 hover:text-white' 
+                      : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              )}
+
+              {/* Header */}
+              <div className={`p-6 border-b ${
+                isDarkMode ? 'border-gray-700' : 'border-gray-200'
+              }`}>
+                <h3 className={`text-2xl font-bold ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>
+                  Complete Payment
+                </h3>
+                <p className={`mt-2 text-sm ${
+                  isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>
+                  Secure payment powered by Razorpay
+                </p>
+              </div>
+
+              {/* Course Details */}
+              <div className="p-6 space-y-4">
+                <div className="flex items-start gap-4">
+                  {course.thumbnail && (
+                    <img
+                      src={course.thumbnail}
+                      alt={course.title}
+                      className="w-20 h-20 rounded-lg object-cover"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <h4 className={`font-semibold line-clamp-2 ${
+                      isDarkMode ? 'text-white' : 'text-gray-900'
+                    }`}>
+                      {course.title}
+                    </h4>
+                    <p className={`text-sm mt-1 ${
+                      isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                    }`}>
+                      By {course.instructor?.username || 'Instructor'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Price Breakdown */}
+                <div className={`p-4 rounded-lg ${
+                  isDarkMode ? 'bg-gray-700/50' : 'bg-gray-50'
+                }`}>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
+                        Course Price
+                      </span>
+                      <span className={`font-semibold ${
+                        isDarkMode ? 'text-white' : 'text-gray-900'
+                      }`}>
+                        ₹{course.price}
+                      </span>
+                    </div>
+                    {course.discount > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
+                          Discount ({course.discount}%)
+                        </span>
+                        <span className="text-green-500 font-medium">
+                          - ₹{(course.price * course.discount / 100).toFixed(0)}
+                        </span>
+                      </div>
+                    )}
+                    <div className={`pt-2 border-t flex justify-between ${
+                      isDarkMode ? 'border-gray-600' : 'border-gray-200'
+                    }`}>
+                      <span className={`font-bold ${
+                        isDarkMode ? 'text-white' : 'text-gray-900'
+                      }`}>
+                        Total Amount
+                      </span>
+                      <span className="text-2xl font-bold text-blue-500">
+                        ₹{course.discount > 0 
+                          ? (course.price * (1 - course.discount / 100)).toFixed(0)
+                          : course.price}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Button */}
+                <button
+                  onClick={handlePayment}
+                  disabled={processingPayment}
+                  className={`w-full py-4 rounded-xl font-semibold text-white transition-all duration-300 ${
+                    processingPayment
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 transform hover:scale-105 shadow-lg hover:shadow-xl'
+                  }`}
+                >
+                  {processingPayment ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
+                      Processing...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <CreditCardIcon className="h-5 w-5" />
+                      Pay Now with Razorpay
+                    </span>
+                  )}
+                </button>
+
+                {/* Security Badge */}
+                <div className="flex items-center justify-center gap-2 text-sm">
+                  <ShieldCheckIcon className={`h-5 w-5 ${
+                    isDarkMode ? 'text-green-400' : 'text-green-600'
+                  }`} />
+                  <span className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
+                    Secure payment by Razorpay
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 

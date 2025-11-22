@@ -11,3 +11,4 @@ export { default as wishlistService } from './wishlistService';
 export { default as enrollmentService } from './enrollmentService';
 export { default as paymentService } from './paymentService';
 export { default as reviewService } from './reviewService';
+export { default as notificationService } from './notificationService';

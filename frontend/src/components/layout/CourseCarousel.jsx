@@ -18,19 +18,45 @@ const CourseCarousel = () => {
   const [loading, setLoading] = useState(true);
   const carouselRef = useRef(null);
 
-  // Fetch featured courses from API
+  // Fetch featured courses from API with new intelligent algorithm
   useEffect(() => {
     const fetchFeaturedCourses = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/courses/featured');
+        const response = await fetch('/api/courses/featured?limit=12');
         const data = await response.json();
         
         if (data.success && data.data) {
-          setCourses(data.data);
+          // Handle nested response structure: data.data.courses or data.data
+          if (Array.isArray(data.data.courses)) {
+            setCourses(data.data.courses);
+          } else if (Array.isArray(data.data)) {
+            setCourses(data.data);
+          } else {
+            console.warn('Featured courses response has unexpected structure:', data);
+            setCourses([]);
+          }
         }
       } catch (error) {
         console.error('Error fetching featured courses:', error);
+        // Fallback to popular courses if featured fails
+        try {
+          const fallbackResponse = await fetch('/api/courses/popular?limit=12');
+          const fallbackData = await fallbackResponse.json();
+          if (fallbackData.success && fallbackData.data) {
+            if (Array.isArray(fallbackData.data.courses)) {
+              setCourses(fallbackData.data.courses);
+            } else if (Array.isArray(fallbackData.data)) {
+              setCourses(fallbackData.data);
+            } else {
+              console.warn('Popular courses response has unexpected structure:', fallbackData);
+              setCourses([]);
+            }
+          }
+        } catch (fallbackError) {
+          console.error('Error fetching fallback courses:', fallbackError);
+          setCourses([]);
+        }
       } finally {
         setLoading(false);
       }
@@ -119,8 +145,8 @@ const CourseCarousel = () => {
     );
   }
 
-  // Show nothing if no courses
-  if (courses.length === 0) {
+  // Ensure courses is always an array and show nothing if no courses
+  if (!Array.isArray(courses) || courses.length === 0) {
     return null;
   }
 
@@ -136,7 +162,7 @@ const CourseCarousel = () => {
               Featured Courses
             </h2>
             <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              Explore our most popular courses
+              AI-curated selection of the highest quality courses
             </p>
           </div>
           
@@ -297,7 +323,7 @@ const CourseCarousel = () => {
                             <span className={`text-2xl font-bold ${
                               isDarkMode ? 'text-white' : 'text-gray-900'
                             }`}>
-                              {course.price === 0 ? 'Free' : `$${course.price}`}
+                              {course.price === 0 ? 'Free' : `₹${course.price}`}
                             </span>
                           </div>
                           <button className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300">

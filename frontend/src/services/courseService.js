@@ -11,7 +11,7 @@ const courseService = {
    */
   getCourses: async (params = {}) => {
     try {
-      const response = await api.get('/api/courses', { params });
+      const response = await api.get('/courses', { params });
       return response.data;
     } catch (error) {
       throw error;
@@ -23,7 +23,7 @@ const courseService = {
    */
   getCourseById: async (courseId) => {
     try {
-      const response = await api.get(`/api/courses/public/${courseId}`);
+      const response = await api.get(`/courses/public/${courseId}`);
       return response.data;
     } catch (error) {
       throw error;
@@ -35,7 +35,7 @@ const courseService = {
    */
   getFeaturedCourses: async (limit = 8) => {
     try {
-      const response = await api.get('/api/courses/featured', {
+      const response = await api.get('/courses/featured', {
         params: { limit }
       });
       return response.data;
@@ -49,7 +49,7 @@ const courseService = {
    */
   getCoursesByCategory: async (category, limit = 10) => {
     try {
-      const response = await api.get(`/api/courses/category/${category}`, {
+      const response = await api.get(`/courses/category/${category}`, {
         params: { limit }
       });
       return response.data;
@@ -63,7 +63,7 @@ const courseService = {
    */
   getPopularTags: async () => {
     try {
-      const response = await api.get('/api/courses/tags/popular');
+      const response = await api.get('/courses/tags/popular');
       return response.data;
     } catch (error) {
       throw error;
@@ -75,7 +75,7 @@ const courseService = {
    */
   getCategories: async () => {
     try {
-      const response = await api.get('/api/courses/categories');
+      const response = await api.get('/courses/categories');
       return response.data;
     } catch (error) {
       throw error;
@@ -87,7 +87,7 @@ const courseService = {
    */
   getPersonalizedCourses: async (limit = 12) => {
     try {
-      const response = await api.get('/api/courses/personalized', {
+      const response = await api.get('/courses/personalized', {
         params: { limit }
       });
       return response.data;
@@ -101,7 +101,7 @@ const courseService = {
    */
   getBatchCourses: async (courseIds) => {
     try {
-      const response = await api.post('/api/courses/batch', { courseIds });
+      const response = await api.post('/courses/batch', { courseIds });
       return response.data;
     } catch (error) {
       throw error;
@@ -115,7 +115,7 @@ const courseService = {
    */
   getInstructorCourses: async () => {
     try {
-      const response = await api.get('/api/courses/instructor');
+      const response = await api.get('/courses/instructor');
       return response.data;
     } catch (error) {
       throw error;
@@ -127,7 +127,7 @@ const courseService = {
    */
   getCourseStats: async () => {
     try {
-      const response = await api.get('/api/courses/instructor/dashboard/stats');
+      const response = await api.get('/courses/instructor/dashboard/stats');
       return response.data;
     } catch (error) {
       throw error;
@@ -139,7 +139,7 @@ const courseService = {
    */
   createCourse: async (courseData) => {
     try {
-      const response = await api.post('/api/courses/instructor', courseData);
+      const response = await api.post('/courses/instructor', courseData);
       return response.data;
     } catch (error) {
       throw error;
@@ -151,7 +151,7 @@ const courseService = {
    */
   getInstructorCourse: async (courseId) => {
     try {
-      const response = await api.get(`/api/courses/instructor/${courseId}`);
+      const response = await api.get(`/courses/instructor/${courseId}`);
       return response.data;
     } catch (error) {
       throw error;
@@ -163,7 +163,7 @@ const courseService = {
    */
   updateCourse: async (courseId, courseData) => {
     try {
-      const response = await api.put(`/api/courses/instructor/${courseId}`, courseData);
+      const response = await api.put(`/courses/instructor/${courseId}`, courseData);
       return response.data;
     } catch (error) {
       throw error;
@@ -175,7 +175,7 @@ const courseService = {
    */
   togglePublishCourse: async (courseId) => {
     try {
-      const response = await api.put(`/api/courses/instructor/${courseId}/publish`);
+      const response = await api.put(`/courses/instructor/${courseId}/publish`);
       return response.data;
     } catch (error) {
       throw error;
@@ -187,7 +187,7 @@ const courseService = {
    */
   deleteCourse: async (courseId) => {
     try {
-      const response = await api.delete(`/api/courses/instructor/${courseId}`);
+      const response = await api.delete(`/courses/instructor/${courseId}`);
       return response.data;
     } catch (error) {
       throw error;
@@ -199,7 +199,7 @@ const courseService = {
    */
   getCourseAnalytics: async (courseId) => {
     try {
-      const response = await api.get(`/api/courses/instructor/${courseId}/analytics`);
+      const response = await api.get(`/courses/instructor/${courseId}/analytics`);
       return response.data;
     } catch (error) {
       throw error;

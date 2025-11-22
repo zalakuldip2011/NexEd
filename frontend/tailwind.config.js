@@ -52,9 +52,16 @@ module.exports = {
       boxShadow: {
         'xl': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
         '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+      },
+      aspectRatio: {
+        'video': '16 / 9',
+        '4/3': '4 / 3',
+        '21/9': '21 / 9',
       }
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/aspect-ratio'),
+  ],
   darkMode: 'class',
 }

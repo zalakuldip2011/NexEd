@@ -740,7 +740,7 @@ const Courses = () => {
                       <td className={`px-6 py-4 whitespace-nowrap text-sm ${
                         isDarkMode ? 'text-slate-300' : 'text-gray-900'
                       }`}>
-                        ${((course.price || 0) * (course.totalEnrollments || 0)).toFixed(2)}
+                        ₹{((course.price || 0) * (course.totalEnrollments || 0)).toLocaleString('en-IN')}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="flex items-center justify-end space-x-2">

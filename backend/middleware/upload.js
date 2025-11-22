@@ -51,8 +51,10 @@ const uploadAvatar = multer({
 // Wrapper to handle multer errors
 const handleAvatarUpload = (req, res, next) => {
   console.log('📤 Upload Middleware - Starting file upload...');
+  console.log('   Content-Type:', req.headers['content-type']);
   console.log('   User authenticated:', !!req.user);
   console.log('   User ID:', req.user?.id);
+  console.log('   Has file in body:', !!req.body);
   
   uploadAvatar(req, res, function (err) {
     if (err instanceof multer.MulterError) {
@@ -79,6 +81,8 @@ const handleAvatarUpload = (req, res, next) => {
     // Everything went fine
     console.log('   ✅ File uploaded successfully');
     console.log('   File:', req.file?.filename);
+    console.log('   File size:', req.file?.size, 'bytes');
+    console.log('   File mimetype:', req.file?.mimetype);
     next();
   });
 };

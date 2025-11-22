@@ -27,9 +27,10 @@ const paymentSchema = new mongoose.Schema({
   currency: {
     type: String,
     required: true,
-    default: 'USD',
+    default: 'INR',
     uppercase: true,
-    enum: ['USD', 'EUR', 'GBP', 'INR', 'CAD', 'AUD']
+    enum: ['INR', 'USD', 'EUR', 'GBP', 'CAD', 'AUD'],
+    default: 'INR'
   },
   status: {
     type: String,
@@ -39,13 +40,13 @@ const paymentSchema = new mongoose.Schema({
   },
   paymentMethod: {
     type: String,
-    enum: ['stripe', 'paypal', 'card', 'wallet', 'free'],
+    enum: ['paypal', 'razorpay', 'card', 'wallet', 'free'],
     required: true,
     index: true
   },
   paymentProvider: {
     type: String,
-    enum: ['stripe', 'paypal', 'razorpay', 'manual', 'free'],
+    enum: ['paypal', 'razorpay', 'manual', 'free'],
     required: true
   },
   transactionId: {
@@ -54,19 +55,16 @@ const paymentSchema = new mongoose.Schema({
     sparse: true,
     index: true
   },
-  paymentIntentId: {
-    type: String, // Stripe payment intent ID
-    sparse: true
-  },
   paymentDetails: {
-    // Stripe-specific
-    stripeCustomerId: String,
-    stripeChargeId: String,
-    stripePaymentMethodId: String,
-    
     // PayPal-specific
     paypalOrderId: String,
     paypalPayerId: String,
+    
+    // Razorpay-specific
+    razorpayOrderId: String,
+    razorpayPaymentId: String,
+    razorpaySignature: String,
+    paymentMethod: String, // card, netbanking, upi, wallet, etc.
     
     // Card details (partial, for display)
     cardBrand: String,
@@ -222,7 +220,6 @@ paymentSchema.index({ instructor: 1, status: 1 });
 paymentSchema.index({ course: 1, status: 1 });
 paymentSchema.index({ status: 1, completedAt: -1 });
 paymentSchema.index({ transactionId: 1 });
-paymentSchema.index({ 'paymentDetails.stripeCustomerId': 1 });
 paymentSchema.index({ createdAt: -1 });
 
 // Virtual for isPaid
@@ -447,7 +444,7 @@ paymentSchema.statics.createPayment = async function(data) {
     course: courseId,
     instructor: course.instructor._id,
     amount: finalAmount,
-    currency: 'USD',
+    currency: 'INR',
     paymentMethod,
     paymentProvider,
     status: paymentMethod === 'free' ? 'completed' : 'pending',

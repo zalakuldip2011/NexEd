@@ -8,12 +8,15 @@ import {
   DocumentTextIcon,
   BriefcaseIcon,
   HeartIcon,
-  XMarkIcon
+  XMarkIcon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
+import FeedbackForm from '../common/FeedbackForm';
 
 const Footer = () => {
   const { isDarkMode } = useTheme();
   const [socialMessage, setSocialMessage] = useState(null);
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
   
   const footerSections = [
     {
@@ -36,7 +39,8 @@ const Footer = () => {
       title: "Support",
       links: [
         { name: "Help Center", href: "/support" },
-        { name: "Contact Us", href: "/contact" }
+        { name: "Contact Us", href: "/contact" },
+        { name: "Share Feedback", href: "#", onClick: () => setShowFeedbackForm(true), special: true }
       ]
     },
     {
@@ -106,16 +110,30 @@ const Footer = () => {
               <ul className="space-y-3">
                 {section.links.map((link, linkIndex) => (
                   <li key={linkIndex}>
-                    <a 
-                      href={link.href}
-                      className={`transition-colors duration-200 ${
-                        isDarkMode 
-                          ? 'text-gray-400 hover:text-white' 
-                          : 'text-gray-600 hover:text-gray-900'
-                      }`}
-                    >
-                      {link.name}
-                    </a>
+                    {link.special ? (
+                      <button 
+                        onClick={link.onClick}
+                        className={`transition-colors duration-200 flex items-center space-x-2 ${
+                          isDarkMode 
+                            ? 'text-gray-400 hover:text-white' 
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        <ChatBubbleLeftRightIcon className="h-4 w-4" />
+                        <span>{link.name}</span>
+                      </button>
+                    ) : (
+                      <a 
+                        href={link.href}
+                        className={`transition-colors duration-200 ${
+                          isDarkMode 
+                            ? 'text-gray-400 hover:text-white' 
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        {link.name}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -257,6 +275,15 @@ const Footer = () => {
           </div>
         </div>
       </div>
+
+      {/* Feedback Form Modal */}
+      <FeedbackForm 
+        isOpen={showFeedbackForm}
+        onClose={() => setShowFeedbackForm(false)}
+        onSuccess={() => {
+          // Optional: You can add additional success handling here
+        }}
+      />
     </footer>
   );
 };

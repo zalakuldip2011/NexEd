@@ -8,10 +8,12 @@ import api from './api';
 const enrollmentService = {
   /**
    * Get all user enrollments
+   * @param {Object} filters - Optional filters (status, sortBy, order)
    */
-  getEnrollments: async () => {
+  getEnrollments: async (filters = {}) => {
     try {
-      const response = await api.get('/api/enrollments');
+      const params = new URLSearchParams(filters);
+      const response = await api.get(`/enrollments?${params.toString()}`);
       return response.data;
     } catch (error) {
       throw error;
@@ -19,11 +21,12 @@ const enrollmentService = {
   },
 
   /**
-   * Get specific enrollment
+   * Get specific enrollment by ID
+   * @param {string} enrollmentId - Enrollment ID
    */
   getEnrollment: async (enrollmentId) => {
     try {
-      const response = await api.get(`/api/enrollments/${enrollmentId}`);
+      const response = await api.get(`/enrollments/${enrollmentId}`);
       return response.data;
     } catch (error) {
       throw error;
@@ -31,11 +34,12 @@ const enrollmentService = {
   },
 
   /**
-   * Get enrollment by course ID
+   * Get enrollment by course ID (check if enrolled)
+   * @param {string} courseId - Course ID
    */
   getEnrollmentByCourse: async (courseId) => {
     try {
-      const response = await api.get(`/api/enrollments/course/${courseId}`);
+      const response = await api.get(`/enroll/check/${courseId}`);
       return response.data;
     } catch (error) {
       throw error;
@@ -44,10 +48,12 @@ const enrollmentService = {
 
   /**
    * Create enrollment (enroll in course)
+   * @param {string} courseId - Course ID
+   * @param {string} paymentId - Optional payment ID
    */
-  createEnrollment: async (courseId) => {
+  createEnrollment: async (courseId, paymentId = null) => {
     try {
-      const response = await api.post('/api/enrollments', { courseId });
+      const response = await api.post('/enrollments', { courseId, paymentId });
       return response.data;
     } catch (error) {
       throw error;
@@ -56,12 +62,16 @@ const enrollmentService = {
 
   /**
    * Update lecture progress
+   * @param {string} enrollmentId - Enrollment ID
+   * @param {string} lectureId - Lecture ID
+   * @param {number} timeSpent - Time spent in seconds
+   * @param {boolean} completed - Whether lecture is completed
    */
-  updateProgress: async (enrollmentId, lectureId, completed = true) => {
+  updateProgress: async (enrollmentId, lectureId, timeSpent = 0, completed = false) => {
     try {
       const response = await api.put(
-        `/api/enrollments/${enrollmentId}/progress`,
-        { lectureId, completed }
+        `/enrollments/${enrollmentId}/progress`,
+        { lectureId, timeSpent, completed }
       );
       return response.data;
     } catch (error) {
@@ -71,11 +81,13 @@ const enrollmentService = {
 
   /**
    * Complete lecture
+   * @param {string} enrollmentId - Enrollment ID
+   * @param {string} lectureId - Lecture ID
    */
   completeLecture: async (enrollmentId, lectureId) => {
     try {
-      const response = await api.put(
-        `/api/enrollments/${enrollmentId}/complete-lecture`,
+      const response = await api.post(
+        `/enrollments/${enrollmentId}/complete-lecture`,
         { lectureId }
       );
       return response.data;
@@ -85,11 +97,17 @@ const enrollmentService = {
   },
 
   /**
-   * Get certificate
+   * Add note to lecture
+   * @param {string} enrollmentId - Enrollment ID
+   * @param {string} lectureId - Lecture ID
+   * @param {string} content - Note content
    */
-  getCertificate: async (enrollmentId) => {
+  addNote: async (enrollmentId, lectureId, content) => {
     try {
-      const response = await api.get(`/api/enrollments/${enrollmentId}/certificate`);
+      const response = await api.post(
+        `/enrollments/${enrollmentId}/notes`,
+        { lectureId, content }
+      );
       return response.data;
     } catch (error) {
       throw error;
@@ -97,11 +115,107 @@ const enrollmentService = {
   },
 
   /**
-   * Generate certificate
+   * Update note
+   * @param {string} enrollmentId - Enrollment ID
+   * @param {string} noteId - Note ID
+   * @param {string} content - Updated content
+   */
+  updateNote: async (enrollmentId, noteId, content) => {
+    try {
+      const response = await api.put(
+        `/enrollments/${enrollmentId}/notes/${noteId}`,
+        { content }
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  /**
+   * Delete note
+   * @param {string} enrollmentId - Enrollment ID
+   * @param {string} noteId - Note ID
+   */
+  deleteNote: async (enrollmentId, noteId) => {
+    try {
+      const response = await api.delete(
+        `/enrollments/${enrollmentId}/notes/${noteId}`
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  /**
+   * Add bookmark
+   * @param {string} enrollmentId - Enrollment ID
+   * @param {string} lectureId - Lecture ID
+   * @param {number} timestamp - Video timestamp
+   * @param {string} title - Bookmark title
+   */
+  addBookmark: async (enrollmentId, lectureId, timestamp, title = '') => {
+    try {
+      const response = await api.post(
+        `/enrollments/${enrollmentId}/bookmarks`,
+        { lectureId, timestamp, title }
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  /**
+   * Delete bookmark
+   * @param {string} enrollmentId - Enrollment ID
+   * @param {string} bookmarkId - Bookmark ID
+   */
+  deleteBookmark: async (enrollmentId, bookmarkId) => {
+    try {
+      const response = await api.delete(
+        `/enrollments/${enrollmentId}/bookmarks/${bookmarkId}`
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  /**
+   * Get certificate
+   * @param {string} enrollmentId - Enrollment ID
+   */
+  getCertificate: async (enrollmentId) => {
+    try {
+      const response = await api.get(`/enrollments/${enrollmentId}/certificate`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  /**
+   * Generate/Issue certificate
+   * @param {string} enrollmentId - Enrollment ID
    */
   generateCertificate: async (enrollmentId) => {
     try {
-      const response = await api.post(`/api/enrollments/${enrollmentId}/certificate`);
+      const response = await api.post(`/enrollments/${enrollmentId}/certificate`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  /**
+   * Check if user is enrolled in a specific course
+   * @param {string} courseId - Course ID
+   */
+  checkEnrollment: async (courseId) => {
+    try {
+      const response = await api.get(`/enroll/check/${courseId}`);
       return response.data;
     } catch (error) {
       throw error;
@@ -110,3 +224,4 @@ const enrollmentService = {
 };
 
 export default enrollmentService;
+

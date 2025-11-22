@@ -10,7 +10,7 @@ import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+import api from '../../services/api';
 
 const CATEGORIES = [
   { id: 'web-dev', name: 'Web Development', icon: '💻' },
@@ -104,19 +104,13 @@ const InterestsModal = ({ isOpen, onClose, onComplete }) => {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       
-      const response = await axios.put(
-        `${API_URL}/auth/interests`,
+      const response = await api.put(
+        '/auth/interests',
         {
           categories: selectedCategories,
           skillLevel: skillLevel,
           goals: selectedGoals
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
         }
       );
 

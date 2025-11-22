@@ -143,7 +143,7 @@ const StatsSection = () => {
       </div>
 
       {/* CSS Animation */}
-      <style jsx>{`
+      <style>{`
         @keyframes slideInUp {
           from {
             opacity: 0;

@@ -11,7 +11,7 @@ const reviewService = {
    */
   getCourseReviews: async (courseId, params = {}) => {
     try {
-      const response = await api.get(`/api/reviews/course/${courseId}`, { params });
+      const response = await api.get(`/reviews/course/${courseId}`, { params });
       return response.data;
     } catch (error) {
       throw error;
@@ -23,7 +23,7 @@ const reviewService = {
    */
   getUserReviews: async () => {
     try {
-      const response = await api.get('/api/reviews/my-reviews');
+      const response = await api.get('/reviews/my-reviews');
       return response.data;
     } catch (error) {
       throw error;
@@ -35,7 +35,7 @@ const reviewService = {
    */
   createReview: async (courseId, rating, comment) => {
     try {
-      const response = await api.post('/api/reviews', {
+      const response = await api.post('/reviews', {
         course: courseId,
         rating,
         comment
@@ -51,7 +51,7 @@ const reviewService = {
    */
   updateReview: async (reviewId, rating, comment) => {
     try {
-      const response = await api.put(`/api/reviews/${reviewId}`, {
+      const response = await api.put(`/reviews/${reviewId}`, {
         rating,
         comment
       });
@@ -66,7 +66,7 @@ const reviewService = {
    */
   deleteReview: async (reviewId) => {
     try {
-      const response = await api.delete(`/api/reviews/${reviewId}`);
+      const response = await api.delete(`/reviews/${reviewId}`);
       return response.data;
     } catch (error) {
       throw error;
@@ -78,7 +78,7 @@ const reviewService = {
    */
   getReview: async (reviewId) => {
     try {
-      const response = await api.get(`/api/reviews/${reviewId}`);
+      const response = await api.get(`/reviews/${reviewId}`);
       return response.data;
     } catch (error) {
       throw error;

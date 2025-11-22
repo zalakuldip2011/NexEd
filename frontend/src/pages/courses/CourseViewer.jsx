@@ -16,6 +16,7 @@ import {
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import YouTubeVideoPlayer from '../../components/common/YouTubeVideoPlayer';
+import api from '../../services/api';
 
 const CourseViewer = () => {
   const { courseId } = useParams();
@@ -38,13 +39,13 @@ const CourseViewer = () => {
   const fetchCourse = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/courses/public/${courseId}`, {
-        credentials: 'include'
-      });
+      console.log('🔄 Fetching course data for courseId:', courseId);
+      
+      const response = await api.get(`/courses/public/${courseId}`);
+      console.log('📚 Course data received:', response.data);
 
-      if (response.ok) {
-        const data = await response.json();
-        setCourse(data.data);
+      if (response.data.success) {
+        setCourse(response.data.data);
         
         // Load completed lectures from localStorage or API
         const completed = localStorage.getItem(`completed_${courseId}`);
@@ -55,7 +56,7 @@ const CourseViewer = () => {
         setError('Course not found or access denied');
       }
     } catch (error) {
-      console.error('Error fetching course:', error);
+      console.error('❌ Error fetching course data:', error);
       setError('Failed to load course');
     } finally {
       setLoading(false);
@@ -234,14 +235,19 @@ const CourseViewer = () => {
               <div className="h-full flex flex-col">
                 {/* Video Player */}
                 {currentLectureData.type === 'video' && currentLectureData.videoData?.videoId && (
-                  <div className="bg-black flex-1 flex items-center justify-center">
-                    <YouTubeVideoPlayer
-                      videoId={currentLectureData.videoData.videoId}
-                      title={currentLectureData.title}
-                      height="100%"
-                      className="w-full max-w-4xl mx-auto"
-                      onEnded={() => markLectureCompleted(currentSection, currentLecture)}
-                    />
+                  <div className="bg-black flex-1 flex items-center justify-center p-4">
+                    <div className="w-full max-w-6xl aspect-video">
+                      <YouTubeVideoPlayer
+                        videoId={currentLectureData.videoData.videoId}
+                        title={currentLectureData.title}
+                        height="100%"
+                        className="w-full h-full"
+                        onEnded={() => markLectureCompleted(currentSection, currentLecture)}
+                        courseId={courseId}
+                        isPaid={course?.isPaid || false}
+                        enableSecurity={true}
+                      />
+                    </div>
                   </div>
                 )}
 

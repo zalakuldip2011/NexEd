@@ -31,6 +31,7 @@ import {
 } from '@heroicons/react/24/solid';
 import YouTubeVideoPlayer from '../../components/common/YouTubeVideoPlayer';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -85,52 +86,60 @@ const InteractiveCoursePlayer = () => {
   const fetchCourseAndEnrollment = async () => {
     try {
       setLoading(true);
+      console.log('🔄 Fetching course and enrollment data for courseId:', courseId);
 
-      const courseResponse = await fetch(`/api/courses/public/${courseId}`, {
-        credentials: 'include'
-      });
-      const courseData = await courseResponse.json();
+      // Fetch course data
+      const courseResponse = await api.get(`/courses/public/${courseId}`);
+      console.log('📚 Course data received:', courseResponse.data);
 
-      if (courseResponse.ok && courseData.success) {
-        setCourse(courseData.data);
+      if (courseResponse.data.success) {
+        setCourse(courseResponse.data.data);
 
-        if (courseData.data.sections && courseData.data.sections.length > 0) {
-          const firstSection = courseData.data.sections[0];
+        if (courseResponse.data.data.sections && courseResponse.data.data.sections.length > 0) {
+          const firstSection = courseResponse.data.data.sections[0];
           if (firstSection.lectures && firstSection.lectures.length > 0) {
-            setCurrentLecture({
+            const firstLecture = {
               ...firstSection.lectures[0],
               sectionTitle: firstSection.title
-            });
+            };
+            console.log('🎬 Setting first lecture:', firstLecture);
+            setCurrentLecture(firstLecture);
           }
         }
 
         const expanded = {};
-        courseData.data.sections.forEach((section, index) => {
+        courseResponse.data.data.sections.forEach((section, index) => {
           expanded[index] = true;
         });
         setExpandedSections(expanded);
       }
 
-      const enrollmentResponse = await fetch('/api/enrollments', {
-        credentials: 'include'
-      });
-      const enrollmentData = await enrollmentResponse.json();
+      // Fetch enrollment data
+      try {
+        const enrollmentResponse = await api.get('/enrollments');
+        console.log('📝 Enrollment data received:', enrollmentResponse.data);
 
-      if (enrollmentResponse.ok && enrollmentData.success) {
-        const courseEnrollment = enrollmentData.enrollments.find(
-          e => e.course._id === courseId || e.course === courseId
-        );
-        
-        if (courseEnrollment) {
-          setEnrollment(courseEnrollment);
-          if (courseEnrollment.completedLectures) {
-            setCompletedLectures(new Set(courseEnrollment.completedLectures));
+        if (enrollmentResponse.data.success && enrollmentResponse.data.data.enrollments) {
+          const courseEnrollment = enrollmentResponse.data.data.enrollments.find(
+            e => e.course._id === courseId || e.course === courseId
+          );
+          
+          if (courseEnrollment) {
+            console.log('✅ Found enrollment for course:', courseEnrollment);
+            setEnrollment(courseEnrollment);
+            if (courseEnrollment.completedLectures) {
+              setCompletedLectures(new Set(courseEnrollment.completedLectures));
+            }
+          } else {
+            console.warn('⚠️ No enrollment found for this course');
           }
         }
+      } catch (enrollmentError) {
+        console.warn('⚠️ Could not fetch enrollment data (user may not be enrolled):', enrollmentError);
       }
 
     } catch (error) {
-      console.error('Error fetching course:', error);
+      console.error('❌ Error fetching course data:', error);
     } finally {
       setLoading(false);
     }
@@ -379,13 +388,22 @@ const InteractiveCoursePlayer = () => {
         {/* Main Content Area */}
         <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarCollapsed ? 'mr-12' : 'mr-0'}`}>
           {/* Video Player */}
-          <div className="flex-1 bg-black flex items-center justify-center relative group">
-            {currentLecture?.videoData?.embedUrl ? (
-              <div className="w-full h-full relative">
-                <YouTubeVideoPlayer
-                  videoData={currentLecture.videoData}
-                  autoplay={true}
-                />
+          <div className="flex-1 bg-black relative group">
+            {currentLecture?.videoData?.videoId ? (
+              <div className="w-full h-full flex items-center justify-center p-4">
+                <div className="w-full max-w-6xl aspect-video">
+                  <YouTubeVideoPlayer
+                    videoId={currentLecture.videoData.videoId}
+                    title={currentLecture.title}
+                    height="100%"
+                    autoplay={true}
+                    allowFullscreen={true}
+                    className="w-full h-full"
+                    courseId={courseId}
+                    isPaid={course?.isPaid || false}
+                    enableSecurity={true}
+                  />
+                </div>
                 
                 {/* Floating Quick Actions on Video */}
                 <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -696,7 +714,7 @@ const InteractiveCoursePlayer = () => {
                                     </p>
                                   )}
                                 </div>
-                                {lecture.videoData?.embedUrl && (
+                                {lecture.videoData?.videoId && (
                                   <PlayIcon className={`h-4 w-4 flex-shrink-0 ${
                                     isCurrent ? 'text-blue-500' : 'theme-text-tertiary'
                                   }`} />

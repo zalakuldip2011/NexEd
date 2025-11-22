@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useWishlist } from '../../context/WishlistContext';
+import { useCart } from '../../context/CartContext';
+import { useToast } from '../../context/ToastContext';
 import { 
   MagnifyingGlassIcon,
   FunnelIcon,
@@ -22,19 +25,23 @@ import { useAuth } from '../../context/AuthContext';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import SkeletonLoader from '../../components/common/SkeletonLoader';
+import { COURSE_CATEGORIES } from '../../constants/categories';
 
 const CourseExplorer = () => {
   const { isDarkMode } = useTheme();
   const { isAuthenticated, user } = useAuth();
+  const toast = useToast();
+  const { wishlistItems, toggleWishlist: toggleWishlistContext } = useWishlist();
+  const { cartItems, addToCart: addToCartContext } = useCart();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const [courses, setCourses] = useState([]);
   const [categories, setCategories] = useState([]);
   const [popularTags, setPopularTags] = useState([]);
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [searchInput, setSearchInput] = useState(''); // For immediate UI update
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const [wishlistItems, setWishlistItems] = useState([]);
-  const [cartItems, setCartItems] = useState([]);
   const [addingToCart, setAddingToCart] = useState({});
   const [togglingWishlist, setTogglingWishlist] = useState({});
   const [filters, setFilters] = useState({
@@ -121,22 +128,39 @@ const CourseExplorer = () => {
     }
   };
 
+  // Handle URL parameters on mount and location change
+  useEffect(() => {
+    const category = searchParams.get('category');
+    const search = searchParams.get('search');
+    
+    if (category || search) {
+      setFilters(prev => ({
+        ...prev,
+        category: category || '',
+        search: search || ''
+      }));
+      
+      if (search) {
+        setSearchInput(search);
+      }
+    }
+  }, [location.search, searchParams]);
+
   // Fetch categories and popular tags
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
-        const [categoriesRes, tagsRes] = await Promise.all([
-          fetch('/api/courses/categories'),
-          fetch('/api/courses/tags/popular')
-        ]);
-
-        const categoriesData = await categoriesRes.json();
+        // Use static categories from constants
+        setCategories(COURSE_CATEGORIES);
+        
+        // Fetch popular tags
+        const tagsRes = await fetch('/api/courses/tags/popular');
         const tagsData = await tagsRes.json();
-
-        if (categoriesData.success) setCategories(categoriesData.data);
         if (tagsData.success) setPopularTags(tagsData.data);
       } catch (error) {
         console.error('Error fetching metadata:', error);
+        // Fallback to static categories
+        setCategories(COURSE_CATEGORIES);
       }
     };
 
@@ -146,41 +170,17 @@ const CourseExplorer = () => {
   // Fetch courses when filters change
   useEffect(() => {
     fetchCourses(1);
-    if (isAuthenticated) {
-      fetchWishlist();
-      fetchCart();
+    
+    // Update URL params when filters change
+    const newSearchParams = new URLSearchParams();
+    if (filters.search) newSearchParams.set('search', filters.search);
+    if (filters.category) newSearchParams.set('category', filters.category);
+    
+    // Only update URL if params actually changed
+    if (newSearchParams.toString() !== searchParams.toString()) {
+      setSearchParams(newSearchParams, { replace: true });
     }
-  }, [filters, isAuthenticated]);
-
-  const fetchWishlist = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/wishlist`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (data.success) {
-        setWishlistItems(data.data.wishlist.courses.map(c => c._id || c));
-      }
-    } catch (error) {
-      console.error('Error fetching wishlist:', error);
-    }
-  };
-
-  const fetchCart = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/cart`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      const data = await response.json();
-      if (data.success) {
-        setCartItems(data.data.cart.courses.map(c => c._id || c));
-      }
-    } catch (error) {
-      console.error('Error fetching cart:', error);
-    }
-  };
+  }, [filters]);
 
   const toggleWishlist = async (courseId, e) => {
     e.preventDefault();
@@ -193,29 +193,11 @@ const CourseExplorer = () => {
 
     try {
       setTogglingWishlist(prev => ({ ...prev, [courseId]: true }));
-      const token = localStorage.getItem('token');
-      const isInWishlist = wishlistItems.includes(courseId);
-
-      if (isInWishlist) {
-        await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/wishlist/${courseId}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        setWishlistItems(prev => prev.filter(id => id !== courseId));
-      } else {
-        await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/wishlist`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ courseId })
-        });
-        setWishlistItems(prev => [...prev, courseId]);
-      }
+      await toggleWishlistContext(courseId);
+      toast.success('Wishlist updated!');
     } catch (error) {
-      console.error('Error toggling wishlist:', error);
-      alert('Failed to update wishlist');
+      console.error('[CourseExplorer] Error toggling wishlist:', error);
+      toast.error(error.message || 'Failed to update wishlist');
     } finally {
       setTogglingWishlist(prev => ({ ...prev, [courseId]: false }));
     }
@@ -232,25 +214,11 @@ const CourseExplorer = () => {
 
     try {
       setAddingToCart(prev => ({ ...prev, [courseId]: true }));
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/cart`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ courseId })
-      });
-      const data = await response.json();
-      if (data.success) {
-        setCartItems(prev => [...prev, courseId]);
-        alert('Course added to cart!');
-      } else {
-        alert(data.message || 'Failed to add to cart');
-      }
+      await addToCartContext(courseId);
+      toast.success('Course added to cart!');
     } catch (error) {
       console.error('Error adding to cart:', error);
-      alert('Failed to add to cart');
+      toast.error(error.message || 'Failed to add to cart');
     } finally {
       setAddingToCart(prev => ({ ...prev, [courseId]: false }));
     }
@@ -310,7 +278,7 @@ const CourseExplorer = () => {
   };
 
   const formatPrice = (price) => {
-    return price === 0 ? 'Free' : `$${price}`;
+    return price === 0 ? 'Free' : `₹${price}`;
   };
 
   return (
@@ -705,7 +673,7 @@ const CourseExplorer = () => {
                             : 'bg-white/90 hover:bg-white'
                         } backdrop-blur-sm shadow-lg`}
                       >
-                        {wishlistItems.includes(course._id) ? (
+                                                        {wishlistItems.some(item => (item.course?._id || item.course) === course._id) ? (
                           <HeartSolid className="h-6 w-6 text-red-500" />
                         ) : (
                           <HeartIcon className={`h-6 w-6 ${
@@ -810,7 +778,7 @@ const CourseExplorer = () => {
                         
                         {course.price > 0 ? (
                           <div className="flex gap-2">
-                            {!cartItems.includes(course._id) ? (
+                            {!cartItems.some(item => (item.course?._id || item.course) === course._id) ? (
                               <button
                                 onClick={(e) => addToCart(course._id, e)}
                                 disabled={addingToCart[course._id]}

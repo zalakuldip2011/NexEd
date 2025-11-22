@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { 
   AcademicCapIcon, 
-  CurrencyDollarIcon, 
+  BanknotesIcon, 
   ClockIcon, 
   GlobeAltIcon,
   ChartBarIcon,
@@ -57,7 +57,7 @@ const BecomeEducator = () => {
 
   const benefits = [
     {
-      icon: CurrencyDollarIcon,
+      icon: BanknotesIcon,
       title: 'Earn Money',
       description: 'Make money from your expertise and passion for teaching'
     },
@@ -216,7 +216,7 @@ const BecomeEducator = () => {
                   </div>
                   
                   <div className="flex items-center space-x-4">
-                    <CurrencyDollarIcon className="w-12 h-12 text-green-400" />
+                    <BanknotesIcon className="w-12 h-12 text-green-400" />
                     <div>
                       <h3 className="text-lg font-semibold text-white">Revenue Tracking</h3>
                       <p className="text-slate-300">Monitor your earnings and payment history</p>

@@ -4,6 +4,9 @@ import { AnimatePresence } from 'framer-motion';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
+import { CartProvider } from './context/CartContext';
+import { WishlistProvider } from './context/WishlistContext';
+import { NotificationProvider } from './context/NotificationContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import LandingPage from './pages/LandingPage';
@@ -22,10 +25,12 @@ import CourseAnalytics from './pages/instructor/CourseAnalytics';
 import CoursesRoutes from './pages/courses';
 import CourseLearning from './pages/courses/CourseLearning';
 import InteractiveCoursePlayer from './pages/courses/InteractiveCoursePlayer';
+import CoursePlayer from './pages/courses/CoursePlayer';
 import EnhancedUserProfile from './pages/profile/EnhancedUserProfile';
 import MyLearning from './pages/MyLearning';
 import Wishlist from './pages/Wishlist';
 import Cart from './pages/Cart';
+import Notifications from './pages/Notifications';
 import AuthenticatedHome from './pages/AuthenticatedHome';
 // About Pages
 import AboutNexEd from './pages/about/AboutNexEd';
@@ -83,9 +88,9 @@ const AnimatedRoutes = () => {
         {/* Course Explorer - Public Access */}
         <Route path="/courses/*" element={<CoursesRoutes />} />
         
-        {/* My Learning - Student Access */}
+        {/* My Learning - Both Student and Instructor Access */}
         <Route path="/my-learning" element={
-          <ProtectedRoute allowedRoles={['student']}>
+          <ProtectedRoute allowedRoles={['student', 'instructor']}>
             <MyLearning />
           </ProtectedRoute>
         } />
@@ -104,17 +109,29 @@ const AnimatedRoutes = () => {
           </ProtectedRoute>
         } />
         
-        {/* Course Learning - Student Access */}
-        <Route path="/learn/:courseId" element={
-          <ProtectedRoute allowedRoles={['student']}>
-            <InteractiveCoursePlayer />
+        {/* Notifications */}
+        <Route path="/notifications" element={
+          <ProtectedRoute>
+            <Notifications />
           </ProtectedRoute>
         } />
         
-        {/* Legacy Course Learning Route */}
+        {/* Course Learning - Both Student and Instructor Access */}
+        <Route path="/learn/:courseId" element={
+          <ProtectedRoute allowedRoles={['student', 'instructor']}>
+            <CoursePlayer />
+          </ProtectedRoute>
+        } />
+        
+        {/* Legacy Course Learning Routes */}
         <Route path="/course/learn/:courseId" element={
-          <ProtectedRoute allowedRoles={['student']}>
+          <ProtectedRoute allowedRoles={['student', 'instructor']}>
             <CourseLearning />
+          </ProtectedRoute>
+        } />
+        <Route path="/courses/interactive/:courseId" element={
+          <ProtectedRoute allowedRoles={['student', 'instructor']}>
+            <InteractiveCoursePlayer />
           </ProtectedRoute>
         } />
         
@@ -125,9 +142,9 @@ const AnimatedRoutes = () => {
           </ProtectedRoute>
         } />
         
-        {/* Student Dashboard */}
+        {/* Student Dashboard - Both Student and Instructor Access */}
         <Route path="/dashboard" element={
-          <ProtectedRoute allowedRoles={['student']}>
+          <ProtectedRoute allowedRoles={['student', 'instructor']}>
             <Dashboard />
           </ProtectedRoute>
         } />
@@ -210,11 +227,17 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <ToastProvider>
-          <Router>
-            <AppContent />
-          </Router>
-        </ToastProvider>
+        <NotificationProvider>
+          <CartProvider>
+            <WishlistProvider>
+              <ToastProvider>
+                <Router>
+                  <AppContent />
+                </Router>
+              </ToastProvider>
+            </WishlistProvider>
+          </CartProvider>
+        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   );

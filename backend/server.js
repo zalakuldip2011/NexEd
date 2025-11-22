@@ -1,3 +1,6 @@
+// Load environment variables FIRST before requiring any other modules
+require('dotenv').config();
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -8,7 +11,18 @@ const cookieParser = require('cookie-parser');
 const path = require('path');
 const connectDB = require('./config/db');
 const { initAccountDeletionJob } = require('./jobs/accountDeletion');
-require('dotenv').config();
+const { requestLogger, performanceMonitor } = require('./middleware/requestLogger');
+const { 
+  errorHandler, 
+  notFound, 
+  handleUnhandledRejection, 
+  handleUncaughtException 
+} = require('./middleware/errorHandler');
+const { logger } = require('./utils/errorLogger');
+
+// Handle uncaught exceptions and unhandled rejections
+handleUncaughtException();
+handleUnhandledRejection();
 
 const app = express();
 
@@ -60,6 +74,8 @@ app.use(cors({
 }));
 
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+app.use(requestLogger); // Custom request logger
+app.use(performanceMonitor); // Performance monitoring
 app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -67,7 +83,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Global rate limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Higher limit in development
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.',
@@ -85,10 +101,14 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/courses', require('./routes/courses'));
 app.use('/api/enrollments', require('./routes/enrollments'));
+app.use('/api/enroll', require('./routes/enroll')); // Razorpay enrollment routes
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/payments', require('./routes/payments'));
 app.use('/api/cart', require('./routes/cart'));
 app.use('/api/wishlist', require('./routes/wishlist'));
+app.use('/api/notifications', require('./routes/notifications'));
+app.use('/api/feedback', require('./routes/feedback'));
+app.use('/api/video', require('./routes/videoSecurity'));
 
 // Basic route
 app.get('/', (req, res) => {
@@ -112,19 +132,46 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    message: 'Something went wrong!',
-    error: process.env.NODE_ENV === 'production' ? {} : err.message
-  });
+// Health check endpoints for monitoring
+app.get('/api/logs/stats', (req, res) => {
+  try {
+    const stats = logger.getLogStats();
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get log stats',
+      error: error.message
+    });
+  }
 });
 
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({ message: 'Route not found' });
+app.get('/api/logs/recent-errors', (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    const errors = logger.getRecentErrors(limit);
+    res.json({
+      success: true,
+      count: errors.length,
+      data: errors
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get recent errors',
+      error: error.message
+    });
+  }
 });
+
+// 404 handler - must be before error handler
+app.use(notFound);
+
+// Global error handling middleware - must be last
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || '0.0.0.0'; // Listen on all network interfaces
@@ -133,6 +180,15 @@ app.listen(PORT, HOST, () => {
   console.log(`🚀 Server running on http://${HOST}:${PORT}`);
   console.log(`📖 API Documentation: http://localhost:${PORT}`);
   console.log(`🔍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📝 Logging: Enabled (check /logs directory)`);
+  
+  // Log server startup
+  logger.info('Server started successfully', {
+    port: PORT,
+    host: HOST,
+    environment: process.env.NODE_ENV || 'development',
+    nodeVersion: process.version
+  });
   
   // Show local network IP for mobile access
   const os = require('os');
@@ -148,4 +204,7 @@ app.listen(PORT, HOST, () => {
   
   // Initialize cron jobs
   initAccountDeletionJob();
+  
+  // Clean old logs on startup (keep last 30 days)
+  logger.cleanOldLogs(30);
 });

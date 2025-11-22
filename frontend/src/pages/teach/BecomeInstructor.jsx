@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { 
   AcademicCapIcon,
-  CurrencyDollarIcon,
+  BanknotesIcon,
   ClockIcon,
   GlobeAltIcon,
   ChartBarIcon,
@@ -17,9 +17,9 @@ const BecomeInstructor = () => {
 
   const benefits = [
     {
-      icon: CurrencyDollarIcon,
+      icon: BanknotesIcon,
       title: 'Earn Money',
-      description: 'Set your own prices and earn revenue from your courses. Instructors earn up to 70% of course sales.'
+      description: 'Set your own prices and earn revenue from your courses. Instructors earn up to 70% of course sales in INR.'
     },
     {
       icon: GlobeAltIcon,

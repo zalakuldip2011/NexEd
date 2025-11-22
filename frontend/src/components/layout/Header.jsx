@@ -15,15 +15,22 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useCart } from '../../context/CartContext';
+import { useWishlist } from '../../context/WishlistContext';
+import NotificationBell from '../ui/NotificationBell';
+import { COURSE_CATEGORIES } from '../../constants/categories';
 
 const Header = () => {
   const { isAuthenticated, user, logout } = useAuth();
   const { isDarkMode, toggleTheme } = useTheme();
+  const { cartCount } = useCart();
+  const { wishlistCount } = useWishlist();
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [hoveredDomain, setHoveredDomain] = useState(null);
   
   // Refs for managing hover delays
   const dropdownTimerRef = useRef(null);
@@ -57,6 +64,18 @@ const Header = () => {
     }, 200); // 200ms delay before closing
   };
 
+  // Handle search functionality
+  const handleSearch = (e) => {
+    if (e.key === 'Enter' || e.type === 'click') {
+      e.preventDefault();
+      if (searchQuery.trim()) {
+        navigate(`/courses?search=${encodeURIComponent(searchQuery.trim())}`);
+      } else {
+        navigate('/courses');
+      }
+    }
+  };
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -84,16 +103,7 @@ const Header = () => {
     }
   };
 
-  const categories = [
-    'Web Development',
-    'Data Science',
-    'Design',
-    'Business',
-    'Marketing',
-    'Photography',
-    'Music',
-    'Health & Fitness'
-  ];
+  const categories = COURSE_CATEGORIES;
 
   return (
     <header className={`sticky top-0 z-50 backdrop-blur-lg border-b shadow-xl transition-colors duration-300 ${
@@ -135,30 +145,82 @@ const Header = () => {
               </button>
               
               {isDropdownOpen && (
-                <div className={`absolute top-full left-0 mt-3 w-56 rounded-xl shadow-2xl z-50 overflow-hidden border transition-colors duration-300 ${
+                <div className={`absolute top-full left-0 mt-3 w-80 rounded-xl shadow-2xl z-50 overflow-hidden border transition-colors duration-300 ${
                   isDarkMode
                     ? 'bg-slate-800/95 backdrop-blur-sm border-slate-600/50'
                     : 'bg-white/95 backdrop-blur-sm border-gray-200/50'
                 }`}>
-                  <div className="py-2">
-                    {categories.map((category, index) => (
-                      <a
-                        key={index}
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          navigate(`/courses?category=${encodeURIComponent(category)}`);
-                          setIsDropdownOpen(false);
-                        }}
-                        className={`block px-4 py-3 text-sm transition-all duration-150 border-l-4 border-transparent ${
-                          isDarkMode
-                            ? 'text-slate-300 hover:text-white hover:bg-slate-700/70 hover:border-blue-500'
-                            : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50 hover:border-blue-500'
-                        }`}
-                      >
-                        {category}
-                      </a>
-                    ))}
+                  <div className="flex">
+                    {/* Main Categories */}
+                    <div className="w-1/2 py-2 border-r border-gray-200 dark:border-gray-700">
+                      {categories.map((category, index) => (
+                        <div
+                          key={index}
+                          className="relative"
+                          onMouseEnter={() => setHoveredDomain(category.domain)}
+                          onMouseLeave={() => setHoveredDomain(null)}
+                        >
+                          <a
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              navigate(`/courses?category=${encodeURIComponent(category.domain)}`);
+                              setIsDropdownOpen(false);
+                            }}
+                            className={`flex items-center justify-between px-4 py-3 text-sm transition-all duration-150 border-l-4 border-transparent ${
+                              hoveredDomain === category.domain
+                                ? isDarkMode
+                                  ? 'text-white bg-slate-700/70 border-blue-500'
+                                  : 'text-gray-900 bg-gray-50 border-blue-500'
+                                : isDarkMode
+                                ? 'text-slate-300 hover:text-white hover:bg-slate-700/70 hover:border-blue-500'
+                                : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50 hover:border-blue-500'
+                            }`}
+                          >
+                            <span className="flex-1">{category.domain}</span>
+                            <ChevronDownIcon className="h-3 w-3 -rotate-90" />
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Subdomains */}
+                    <div className="w-1/2 py-2">
+                      {hoveredDomain && (
+                        <div className="px-2">
+                          <h4 className={`px-2 py-1 text-xs font-semibold uppercase tracking-wide ${
+                            isDarkMode ? 'text-slate-400' : 'text-gray-500'
+                          }`}>
+                            {hoveredDomain}
+                          </h4>
+                          {categories.find(cat => cat.domain === hoveredDomain)?.subdomains.map((subdomain, subIndex) => (
+                            <a
+                              key={subIndex}
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                navigate(`/courses?category=${encodeURIComponent(subdomain)}`);
+                                setIsDropdownOpen(false);
+                              }}
+                              className={`block px-2 py-2 text-sm rounded-lg transition-all duration-150 ${
+                                isDarkMode
+                                  ? 'text-slate-300 hover:text-white hover:bg-slate-700/50'
+                                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                              }`}
+                            >
+                              {subdomain}
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                      {!hoveredDomain && (
+                        <div className="px-4 py-8 text-center">
+                          <p className={`text-sm ${isDarkMode ? 'text-slate-400' : 'text-gray-500'}`}>
+                            Hover over a category to see subcategories
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -177,6 +239,7 @@ const Header = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearch}
                 placeholder="Search for courses"
                 className={`w-full pl-12 pr-4 py-3 rounded-xl border shadow-sm focus:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 ${
                   isDarkMode
@@ -184,6 +247,19 @@ const Header = () => {
                     : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500 focus:ring-purple-500/50 focus:border-purple-500 focus:bg-white'
                 }`}
               />
+              {searchQuery && (
+                <button
+                  onClick={handleSearch}
+                  className={`absolute right-3 top-1/2 transform -translate-y-1/2 p-1 rounded-lg transition-colors ${
+                    isDarkMode
+                      ? 'text-slate-400 hover:text-purple-400 hover:bg-slate-700/50'
+                      : 'text-gray-400 hover:text-purple-600 hover:bg-gray-100'
+                  }`}
+                  title="Search"
+                >
+                  <MagnifyingGlassIcon className="h-4 w-4" />
+                </button>
+              )}
             </div>
 
             {/* Explore Button */}
@@ -249,9 +325,11 @@ const Header = () => {
                   }`}
                 >
                   <HeartIcon className="h-6 w-6" />
-                  <span className="absolute -top-1 -right-1 h-5 w-5 bg-pink-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
-                    0
-                  </span>
+                  {wishlistCount > 0 && (
+                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-pink-500 text-white text-xs rounded-full flex items-center justify-center font-medium animate-pulse">
+                      {wishlistCount}
+                    </span>
+                  )}
                 </Link>
 
                 {/* Cart Button */}
@@ -264,22 +342,17 @@ const Header = () => {
                   }`}
                 >
                   <ShoppingCartIcon className="h-6 w-6" />
-                  <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
-                    0
-                  </span>
+                  {cartCount > 0 && (
+                    <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium animate-pulse">
+                      {cartCount}
+                    </span>
+                  )}
                 </Link>
 
                 {/* Notifications Button */}
-                <button className={`hidden sm:flex p-2.5 rounded-xl transition-all duration-200 transform hover:scale-110 shadow-sm hover:shadow-md relative group ${
-                  isDarkMode
-                    ? 'text-slate-300 hover:text-white hover:bg-slate-800/50'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}>
-                  <BellIcon className="h-6 w-6" />
-                  <span className="absolute -top-1 -right-1 h-5 w-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
-                    0
-                  </span>
-                </button>
+                <div className="hidden sm:flex">
+                  <NotificationBell />
+                </div>
 
                 {/* Divider */}
                 <div className={`hidden sm:block h-8 w-px mx-1 ${
@@ -461,6 +534,9 @@ const Header = () => {
                 </div>
                 <input
                   type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleSearch}
                   placeholder="Search courses..."
                   className={`w-full pl-12 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 transition-colors ${
                     isDarkMode
@@ -510,27 +586,31 @@ const Header = () => {
                       <span>Cart</span>
                       <span className="ml-auto px-2 py-0.5 bg-red-500 text-white text-xs rounded-full">0</span>
                     </Link>
-                    <button 
+                    <Link 
+                      to="/notifications"
                       className={`flex items-center space-x-3 w-full px-4 py-3 rounded-xl transition-all duration-200 ${
                         isDarkMode
                           ? 'text-slate-300 hover:text-white hover:bg-slate-800/50'
                           : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
-                      }`}>
+                      }`}
+                      onClick={() => setIsMobileMenuOpen(false)}>
                       <BellIcon className="h-5 w-5" />
                       <span>Notifications</span>
-                      <span className="ml-auto px-2 py-0.5 bg-blue-500 text-white text-xs rounded-full">0</span>
-                    </button>
+                    </Link>
                     <div className={`border-t my-2 ${isDarkMode ? 'border-slate-700/50' : 'border-gray-200/50'}`}></div>
                   </>
                 )}
                 
-                <button className={`w-full text-left px-4 py-3 rounded-xl transition-all duration-200 ${
-                  isDarkMode
-                    ? 'text-slate-300 hover:text-white hover:bg-slate-800/50'
-                    : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
-                }`}>
-                  Categories
-                </button>
+                <Link 
+                  to="/courses"
+                  className={`block w-full text-left px-4 py-3 rounded-xl transition-all duration-200 ${
+                    isDarkMode
+                      ? 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                      : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                  onClick={() => setIsMobileMenuOpen(false)}>
+                  All Categories
+                </Link>
                 <Link 
                   to="/courses"
                   className={`block w-full text-left px-4 py-3 rounded-xl transition-all duration-200 ${

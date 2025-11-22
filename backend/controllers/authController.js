@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const User = require('../models/User');
+const NotificationService = require('../services/notificationService');
 const emailService = require('../utils/emailService');
 
 // Helper function to create and send token
@@ -39,7 +40,10 @@ const createSendToken = (user, statusCode, res, message = 'Success') => {
 // @access  Public
 const signup = async (req, res) => {
   try {
+    console.log('=== SIGNUP REQUEST RECEIVED ===');
+    console.log('Request body:', req.body);
     const { username, email, password } = req.body;
+    console.log('Parsed values:', { username, email, password: password ? '***' : undefined });
 
     // Check if user already exists with email
     const existingEmail = await User.emailExists(email);
@@ -94,7 +98,9 @@ const signup = async (req, res) => {
 
     // Send OTP email
     try {
-      await emailService.sendOTPEmail(email, username, otp);
+      console.log(`Attempting to send OTP email to: ${email}`);
+      const emailResult = await emailService.sendOTPEmail(email, username, otp);
+      console.log('Email result:', emailResult);
       
       console.log(`OTP sent to new user: ${email} (${username})`);
 
@@ -113,7 +119,13 @@ const signup = async (req, res) => {
       // If email fails, delete the user and return error
       await User.findByIdAndDelete(newUser._id);
       
-      console.error('Failed to send OTP email:', emailError);
+      console.error('=== EMAIL SEND FAILED ===');
+      console.error('Error name:', emailError.name);
+      console.error('Error message:', emailError.message);
+      console.error('Error code:', emailError.code);
+      console.error('Full error:', emailError);
+      console.error('========================');
+      
       return res.status(500).json({
         success: false,
         message: 'Failed to send verification email. Please try again.',
@@ -122,7 +134,12 @@ const signup = async (req, res) => {
     }
 
   } catch (error) {
-    console.error('Signup error:', error);
+    console.error('=== SIGNUP ERROR ===');
+    console.error('Error name:', error.name);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+    console.error('Full error:', error);
+    console.error('===================');
 
     // Handle duplicate key errors
     if (error.code === 11000) {
@@ -382,6 +399,17 @@ const changePassword = async (req, res) => {
     // Update password
     user.password = newPassword;
     await user.save();
+
+    // Create password change notification
+    try {
+      await NotificationService.createPasswordChangeNotification(
+        user._id,
+        req.ip || req.connection.remoteAddress,
+        req.headers['user-agent']
+      );
+    } catch (error) {
+      console.error('Error creating password change notification:', error);
+    }
 
     // Send new token
     createSendToken(user, 200, res, 'Password changed successfully');

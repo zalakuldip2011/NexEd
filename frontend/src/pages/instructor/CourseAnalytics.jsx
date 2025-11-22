@@ -5,7 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 import {
   ChartBarIcon,
   UsersIcon,
-  CurrencyDollarIcon,
+  BanknotesIcon,
   StarIcon,
   ArrowTrendingUpIcon,
   AcademicCapIcon,
@@ -190,9 +190,9 @@ const CourseAnalytics = () => {
             color="blue"
           />
           <StatCard
-            icon={CurrencyDollarIcon}
+            icon={BanknotesIcon}
             label="Total Revenue"
-            value={`$${analytics.overview.totalRevenue.toFixed(2)}`}
+            value={`₹${analytics.overview.totalRevenue.toLocaleString('en-IN')}`}
             color="green"
           />
           <StatCard

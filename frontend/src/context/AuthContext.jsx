@@ -1,12 +1,25 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import axios from 'axios';
+import React, { createContext, useContext, useReducer, useEffect, useMemo, useCallback } from 'react';
+import api from '../services/api';
 
-// API base URL
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+// Use the centralized API service
+const axios = api;
 
-// Configure axios defaults
-axios.defaults.baseURL = API_URL;
-axios.defaults.withCredentials = true;
+// Add axios interceptor to suppress expected 401 errors on login
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Suppress console error for expected 401 on login endpoint
+    if (error.response?.status === 401 && error.config?.url?.includes('/auth/login')) {
+      // Expected error - wrong password, just return rejected promise silently
+      return Promise.reject(error);
+    }
+    // For other errors, log them normally
+    if (error.response && process.env.NODE_ENV === 'development') {
+      console.error(`API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url}`, error.response.status);
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Initial state
 const initialState = {
@@ -74,6 +87,14 @@ const authReducer = (state, action) => {
       };
 
     case AUTH_ACTIONS.LOGIN_FAILURE:
+      // DON'T clear token/user on login failure - keep existing state
+      // User might already be logged in with another account
+      return {
+        ...state,
+        isLoading: false,
+        error: action.payload
+      };
+      
     case AUTH_ACTIONS.SIGNUP_FAILURE:
     case AUTH_ACTIONS.LOAD_USER_FAILURE:
       return {
@@ -102,14 +123,9 @@ const authReducer = (state, action) => {
       };
 
     case AUTH_ACTIONS.UPDATE_PROFILE:
-      // ✅ SAFE: Validate state and user before spreading
-      const safeState = state && typeof state === 'object' ? state : {};
-      const safeUser = safeState.user && typeof safeState.user === 'object' ? safeState.user : {};
-      const safePayload = action.payload && typeof action.payload === 'object' ? action.payload : {};
-      
       return {
-        ...safeState,
-        user: { ...safeUser, ...safePayload }
+        ...state,
+        user: { ...state.user, ...action.payload }
       };
 
     default:
@@ -139,16 +155,15 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      // Only check auth if token exists
       checkAuth();
     } else {
-      // No token, user is not authenticated - stop loading immediately
       dispatch({ type: AUTH_ACTIONS.LOAD_USER_FAILURE, payload: null });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Check authentication status
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     dispatch({ type: AUTH_ACTIONS.LOAD_USER_START });
     
     try {
@@ -165,10 +180,10 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       dispatch({ type: AUTH_ACTIONS.LOAD_USER_FAILURE, payload: null });
     }
-  };
+  }, []);
 
   // Login function
-  const login = async (emailOrUsername, password) => {
+  const login = useCallback(async (emailOrUsername, password) => {
     dispatch({ type: AUTH_ACTIONS.LOGIN_START });
     
     try {
@@ -188,7 +203,6 @@ export const AuthProvider = ({ children }) => {
         payload: errorData
       });
       
-      // Return error details to the component
       return { 
         success: false, 
         message: errorData.message || 'Login failed. Please check your credentials.',
@@ -197,17 +211,15 @@ export const AuthProvider = ({ children }) => {
         errors: errorData.errors
       };
     }
-  };
+  }, []);
 
   // Signup function
-  const signup = async (userData) => {
+  const signup = useCallback(async (userData) => {
     dispatch({ type: AUTH_ACTIONS.SIGNUP_START });
     
     try {
       const response = await axios.post('/auth/signup', userData);
       
-      // For signup, we don't authenticate the user immediately
-      // They need to verify their email first
       dispatch({ type: AUTH_ACTIONS.SIGNUP_COMPLETE });
       
       return { 
@@ -232,10 +244,10 @@ export const AuthProvider = ({ children }) => {
         field: errorData.field
       };
     }
-  };
+  }, []);
 
   // Logout function
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await axios.post('/auth/logout');
     } catch (error) {
@@ -243,10 +255,10 @@ export const AuthProvider = ({ children }) => {
     } finally {
       dispatch({ type: AUTH_ACTIONS.LOGOUT });
     }
-  };
+  }, []);
 
   // Update profile function
-  const updateProfile = async (profileData) => {
+  const updateProfile = useCallback(async (profileData) => {
     try {
       const response = await axios.put('/auth/update-profile', profileData);
       
@@ -264,10 +276,10 @@ export const AuthProvider = ({ children }) => {
         errors: errorData.errors
       };
     }
-  };
+  }, []);
 
   // Change password function
-  const changePassword = async (passwordData) => {
+  const changePassword = useCallback(async (passwordData) => {
     try {
       const response = await axios.put('/auth/change-password', passwordData);
       
@@ -286,23 +298,23 @@ export const AuthProvider = ({ children }) => {
         errors: errorData.errors
       };
     }
-  };
+  }, []);
 
-  // Update user in state (for immediate UI updates)
-  const updateUser = (userData) => {
+  // Update user in state
+  const updateUser = useCallback((userData) => {
     dispatch({
       type: AUTH_ACTIONS.UPDATE_PROFILE,
       payload: userData
     });
-  };
+  }, []);
 
   // Clear error function
-  const clearError = () => {
+  const clearError = useCallback(() => {
     dispatch({ type: AUTH_ACTIONS.CLEAR_ERROR });
-  };
+  }, []);
 
   // Verify email with OTP
-  const verifyEmail = async (email, otp) => {
+  const verifyEmail = useCallback(async (email, otp) => {
     dispatch({ type: AUTH_ACTIONS.LOGIN_START });
     
     try {
@@ -328,10 +340,10 @@ export const AuthProvider = ({ children }) => {
         code: errorData.code
       };
     }
-  };
+  }, []);
 
   // Resend OTP
-  const resendOTP = async (email) => {
+  const resendOTP = useCallback(async (email) => {
     try {
       const response = await axios.post('/auth/resend-otp', { email });
       return { success: true, message: response.data.message };
@@ -343,9 +355,9 @@ export const AuthProvider = ({ children }) => {
         code: errorData.code
       };
     }
-  };
+  }, []);
 
-  const value = {
+  const value = useMemo(() => ({
     user: state.user,
     token: state.token,
     isAuthenticated: state.isAuthenticated,
@@ -361,7 +373,23 @@ export const AuthProvider = ({ children }) => {
     changePassword,
     clearError,
     checkAuth
-  };
+  }), [
+    state.user,
+    state.token,
+    state.isAuthenticated,
+    state.isLoading,
+    state.error,
+    login,
+    signup,
+    logout,
+    verifyEmail,
+    resendOTP,
+    updateProfile,
+    updateUser,
+    changePassword,
+    clearError,
+    checkAuth
+  ]);
 
   return (
     <AuthContext.Provider value={value}>

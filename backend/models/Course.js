@@ -31,26 +31,22 @@ const courseSchema = new mongoose.Schema({
     required: function() {
       return this.status === 'published';
     },
-    enum: [
-      'Web Development',
-      'Data Science',
-      'Design',
-      'Business',
-      'Marketing',
-      'Photography',
-      'Music',
-      'Health & Fitness',
-      'Programming',
-      'Technology',
-      'Language',
-      'Academic',
-      'Personal Development',
-      '' // Allow empty for drafts
-    ]
+    trim: true,
+    // Removed enum restriction to allow comprehensive domain > subdomain format
+    validate: {
+      validator: function(v) {
+        // Allow empty string for drafts
+        if (!v || v === '') return true;
+        // Check if it's a valid domain or domain > subdomain format
+        return typeof v === 'string' && v.length > 0;
+      },
+      message: 'Category must be a non-empty string'
+    }
   },
   subcategory: {
     type: String,
-    trim: true
+    trim: true,
+    // Deprecated: keeping for backward compatibility, but new courses use category field with domain > subdomain format
   },
   level: {
     type: String,
@@ -174,6 +170,14 @@ const courseSchema = new mongoose.Schema({
     default: 'draft'
   },
   isPublished: {
+    type: Boolean,
+    default: false
+  },
+  isFeatured: {
+    type: Boolean,
+    default: false
+  },
+  isPopular: {
     type: Boolean,
     default: false
   },
@@ -425,13 +429,19 @@ courseSchema.statics.getPopularTags = async function() {
 };
 
 courseSchema.statics.getCoursesByCategory = async function(category, limit = 10) {
-  return this.find({
-    category: category,
-    isPublished: true
-  })
-  .populate('instructor', 'name profilePicture')
-  .sort({ averageRating: -1, totalEnrollments: -1 })
-  .limit(limit);
+  // Support both exact match and domain-level search for new format
+  const query = {
+    isPublished: true,
+    $or: [
+      { category: category }, // Exact match
+      { category: { $regex: `^${category.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($| > )`, $options: 'i' } } // Domain match for "domain > subdomain" format
+    ]
+  };
+  
+  return this.find(query)
+    .populate('instructor', 'name profilePicture')
+    .sort({ averageRating: -1, totalEnrollments: -1 })
+    .limit(limit);
 };
 
 courseSchema.statics.searchCourses = async function(query, filters = {}) {

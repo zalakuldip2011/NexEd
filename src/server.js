@@ -10,7 +10,8 @@ const logger = require('./courses/utils/logger.util');
 
 // Configuration
 const PORT = process.env.COURSE_SERVICE_PORT || 5001;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/nexed';
+// MongoDB connection
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/NexEd';
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // MongoDB connection options

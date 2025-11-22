@@ -8,7 +8,7 @@ import {
   PlusIcon,
   BookOpenIcon,
   UsersIcon,
-  CurrencyDollarIcon,
+  BanknotesIcon,
   StarIcon,
   ChartBarIcon,
   PencilIcon,
@@ -31,6 +31,7 @@ const InstructorDashboard = () => {
     publishedCourses: 0
   });
   const [recentCourses, setRecentCourses] = useState([]);
+  const [studentPerformance, setStudentPerformance] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -80,6 +81,9 @@ const InstructorDashboard = () => {
         
         setRecentCourses(coursesData);
         
+        // Fetch student performance data
+        fetchStudentPerformance();
+        
         console.log('✅ Dashboard loaded:', {
           courses: statsData.totalCourses,
           published: statsData.publishedCourses,
@@ -95,6 +99,26 @@ const InstructorDashboard = () => {
       console.error('💥 Error fetching dashboard data:', error);
       alert('Failed to load dashboard. Please check your connection.');
       setLoading(false);
+    }
+  };
+
+  const fetchStudentPerformance = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/courses/instructor/student-performance', {
+        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setStudentPerformance(data.data || []);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching student performance:', error);
     }
   };
 
@@ -122,36 +146,10 @@ const InstructorDashboard = () => {
       icon: PencilIcon,
       link: "/instructor/courses",
       color: "blue"
-    },
-    {
-      title: "View Performance",
-      description: "Check your course analytics",
-      icon: ChartBarIcon,
-      link: "/instructor/performance",
-      color: "green"
     }
   ];
 
-  const recommendations = [
-    {
-      title: "Create an Engaging Course",
-      description: "Learn how to create courses that students love",
-      image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=80&h=60&fit=crop",
-      link: "/instructor/resources"
-    },
-    {
-      title: "Build Your Audience",
-      description: "Tips to market and grow your student base",
-      image: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=80&h=60&fit=crop",
-      link: "/instructor/resources"
-    },
-    {
-      title: "Get Started with Video",
-      description: "Best practices for recording quality videos",
-      image: "https://images.unsplash.com/photo-1492619375914-88005aa9e8fb?w=80&h=60&fit=crop",
-      link: "/instructor/resources"
-    }
-  ];
+
 
   if (loading) {
     return (
@@ -288,7 +286,7 @@ const InstructorDashboard = () => {
               <div className={`flex-shrink-0 p-3 rounded-lg ${
                 isDarkMode ? 'bg-emerald-500/10' : 'bg-green-100'
               }`}>
-                <CurrencyDollarIcon className={`h-6 w-6 ${
+                <BanknotesIcon className={`h-6 w-6 ${
                   isDarkMode ? 'text-emerald-400' : 'text-green-600'
                 }`} />
               </div>
@@ -298,7 +296,7 @@ const InstructorDashboard = () => {
                 }`}>Total Revenue</p>
                 <p className={`text-2xl font-bold transition-colors ${
                   isDarkMode ? 'text-white' : 'text-gray-900'
-                }`}>${stats.totalRevenue}</p>
+                }`}>₹{stats.totalRevenue.toLocaleString('en-IN')}</p>
               </div>
             </div>
           </div>
@@ -328,9 +326,9 @@ const InstructorDashboard = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="space-y-8">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="space-y-8">
             {/* Progress Tracker */}
             <div className={`rounded-xl shadow-lg border p-6 transition-colors ${
               isDarkMode 
@@ -388,7 +386,7 @@ const InstructorDashboard = () => {
               <h2 className={`text-lg font-semibold mb-4 transition-colors ${
                 isDarkMode ? 'text-white' : 'text-gray-900'
               }`}>Quick Actions</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {quickActions.map((action, index) => {
                   const Icon = action.icon;
                   return (
@@ -515,50 +513,124 @@ const InstructorDashboard = () => {
                 ))}
               </div>
             </div>
-          </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Recommendations */}
+            {/* Student Performance */}
             <div className={`rounded-xl shadow-lg border p-6 transition-colors ${
               isDarkMode 
                 ? 'bg-slate-800/50 border-slate-700/50 backdrop-blur-sm' 
                 : 'bg-white border-gray-200'
             }`}>
-              <h2 className={`text-lg font-semibold mb-4 transition-colors ${
-                isDarkMode ? 'text-white' : 'text-gray-900'
-              }`}>Recommended for you</h2>
-              <div className="space-y-4">
-                {recommendations.map((rec, index) => (
-                  <Link
-                    key={index}
-                    to={rec.link}
-                    className={`flex items-start space-x-3 p-3 rounded-lg transition-all hover:-translate-y-0.5 ${
-                      isDarkMode 
-                        ? 'hover:bg-slate-700/50' 
-                        : 'hover:bg-gray-50'
-                    }`}
-                  >
-                    <img 
-                      src={rec.image} 
-                      alt={rec.title}
-                      className={`w-12 h-9 object-cover rounded ${
-                        isDarkMode ? 'bg-slate-700' : 'bg-gray-200'
-                      }`}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <h3 className={`text-sm font-medium transition-colors ${
-                        isDarkMode ? 'text-slate-200' : 'text-gray-900'
-                      }`}>{rec.title}</h3>
-                      <p className={`text-xs mt-1 transition-colors ${
-                        isDarkMode ? 'text-slate-400' : 'text-gray-600'
-                      }`}>{rec.description}</p>
-                    </div>
-                  </Link>
-                ))}
+              <div className="flex items-center justify-between mb-4">
+                <h2 className={`text-lg font-semibold transition-colors ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>Student Performance</h2>
+                <Link 
+                  to="/instructor/courses"
+                  className={`text-sm font-medium transition-colors ${
+                    isDarkMode 
+                      ? 'text-purple-400 hover:text-purple-300' 
+                      : 'text-purple-600 hover:text-purple-700'
+                  }`}
+                >
+                  View all courses
+                </Link>
               </div>
+              
+              {studentPerformance.length > 0 ? (
+                <div className="space-y-4">
+                  {studentPerformance.slice(0, 5).map((performance, index) => (
+                    <div key={index} className={`p-4 rounded-lg border transition-colors ${
+                      isDarkMode 
+                        ? 'border-slate-600/50 bg-slate-700/30' 
+                        : 'border-gray-200 bg-gray-50'
+                    }`}>
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h3 className={`font-medium transition-colors ${
+                            isDarkMode ? 'text-slate-200' : 'text-gray-900'
+                          }`}>{performance.courseName}</h3>
+                          <p className={`text-sm transition-colors ${
+                            isDarkMode ? 'text-slate-400' : 'text-gray-600'
+                          }`}>{performance.totalStudents} enrolled students</p>
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-sm font-medium transition-colors ${
+                            isDarkMode ? 'text-slate-200' : 'text-gray-900'
+                          }`}>
+                            {performance.averageProgress}% avg progress
+                          </div>
+                          <div className={`text-xs transition-colors ${
+                            performance.completionRate >= 70 ? 'text-green-600' :
+                            performance.completionRate >= 50 ? 'text-yellow-600' : 'text-red-600'
+                          }`}>
+                            {performance.completionRate}% completion rate
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Progress Bar */}
+                      <div className="mb-3">
+                        <div className={`w-full rounded-full h-2 ${
+                          isDarkMode ? 'bg-slate-600' : 'bg-gray-200'
+                        }`}>
+                          <div 
+                            className="bg-gradient-to-r from-purple-600 to-indigo-600 h-2 rounded-full transition-all duration-500" 
+                            style={{ width: `${performance.averageProgress}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                      
+                      {/* Student Stats */}
+                      <div className="grid grid-cols-3 gap-4 text-center">
+                        <div>
+                          <div className={`text-sm font-medium transition-colors ${
+                            isDarkMode ? 'text-green-400' : 'text-green-600'
+                          }`}>
+                            {performance.activeStudents}
+                          </div>
+                          <div className={`text-xs transition-colors ${
+                            isDarkMode ? 'text-slate-400' : 'text-gray-500'
+                          }`}>Active</div>
+                        </div>
+                        <div>
+                          <div className={`text-sm font-medium transition-colors ${
+                            isDarkMode ? 'text-blue-400' : 'text-blue-600'
+                          }`}>
+                            {performance.completedStudents}
+                          </div>
+                          <div className={`text-xs transition-colors ${
+                            isDarkMode ? 'text-slate-400' : 'text-gray-500'
+                          }`}>Completed</div>
+                        </div>
+                        <div>
+                          <div className={`text-sm font-medium transition-colors ${
+                            isDarkMode ? 'text-yellow-400' : 'text-yellow-600'
+                          }`}>
+                            {performance.strugglingStudents}
+                          </div>
+                          <div className={`text-xs transition-colors ${
+                            isDarkMode ? 'text-slate-400' : 'text-gray-500'
+                          }`}>Struggling</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className={`text-center py-8 ${
+                  isDarkMode ? 'text-slate-400' : 'text-gray-500'
+                }`}>
+                  <UsersIcon className={`h-12 w-12 mx-auto mb-2 ${
+                    isDarkMode ? 'text-slate-600' : 'text-gray-400'
+                  }`} />
+                  <p>No student performance data available yet.</p>
+                  <p className="text-sm mt-1">Students will appear here once they enroll in your courses.</p>
+                </div>
+              )}
             </div>
           </div>
+
+
         </div>
       </div>
     </InstructorLayout>

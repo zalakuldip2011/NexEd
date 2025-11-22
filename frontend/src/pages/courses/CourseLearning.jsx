@@ -13,6 +13,7 @@ import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
 import YouTubeVideoPlayer from '../../components/common/YouTubeVideoPlayer';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 
 const CourseLearning = () => {
   const { courseId } = useParams();
@@ -216,13 +217,20 @@ const CourseLearning = () => {
       <div className="flex h-[calc(100vh-73px)]">
         {/* Main Video Player */}
         <div className="flex-1 flex flex-col">
-          <div className="flex-1 bg-black flex items-center justify-center">
+          <div className="flex-1 bg-black flex items-center justify-center p-4">
             {currentLecture ? (
-              currentLecture.videoData?.embedUrl ? (
-                <div className="w-full h-full">
+              currentLecture.videoData?.videoId ? (
+                <div className="w-full max-w-6xl aspect-video">
                   <YouTubeVideoPlayer
-                    videoData={currentLecture.videoData}
+                    videoId={currentLecture.videoData.videoId}
+                    title={currentLecture.title}
+                    height="100%"
                     autoplay={true}
+                    allowFullscreen={true}
+                    className="w-full h-full"
+                    courseId={courseId}
+                    isPaid={course?.isPaid || false}
+                    enableSecurity={true}
                   />
                 </div>
               ) : (
@@ -345,7 +353,7 @@ const CourseLearning = () => {
                               </p>
                             )}
                           </div>
-                          {lecture.videoData?.embedUrl && (
+                          {lecture.videoData?.videoId && (
                             <PlayIcon className="h-4 w-4 theme-text-tertiary" />
                           )}
                         </button>

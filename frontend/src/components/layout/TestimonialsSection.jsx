@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { StarIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
+import axios from 'axios';
 
 const TestimonialsSection = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [testimonials, setTestimonials] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const testimonials = [
+  // Fallback testimonials in case no real data is available
+  const fallbackTestimonials = [
     {
       id: 1,
       name: "Sarah Johnson",
@@ -61,13 +65,49 @@ const TestimonialsSection = () => {
     }
   ];
 
+  // Fetch real testimonials from API
+  const fetchTestimonials = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get('/api/feedback/featured?limit=6');
+      
+      if (response.data.success && response.data.data.feedback.length > 0) {
+        // Transform API data to testimonial format
+        const realTestimonials = response.data.data.feedback.map(feedback => ({
+          id: feedback._id,
+          name: feedback.name,
+          role: 'NexEd Student',
+          image: `https://images.unsplash.com/photo-${Math.floor(Math.random() * 1000000000)}?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80`,
+          rating: feedback.rating,
+          quote: feedback.message,
+          course: feedback.title
+        }));
+        setTestimonials(realTestimonials);
+      } else {
+        // Use fallback testimonials if no real data
+        setTestimonials(fallbackTestimonials);
+      }
+    } catch (error) {
+      console.error('Error fetching testimonials:', error);
+      setTestimonials(fallbackTestimonials);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTestimonials();
+  }, []);
+
   // Auto-slide functionality
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % Math.ceil(testimonials.length / 3));
-    }, 4000);
-    return () => clearInterval(timer);
-  }, [testimonials.length]);
+    if (!loading && testimonials.length > 0) {
+      const timer = setInterval(() => {
+        setCurrentIndex((prev) => (prev + 1) % Math.ceil(testimonials.length / 3));
+      }, 4000);
+      return () => clearInterval(timer);
+    }
+  }, [testimonials.length, loading]);
 
   const nextSlide = () => {
     setCurrentIndex((prev) => (prev + 1) % Math.ceil(testimonials.length / 3));
@@ -152,17 +192,19 @@ const TestimonialsSection = () => {
         </div>
 
         {/* Slide Indicators */}
-        <div className="flex justify-center mt-8 space-x-2">
-          {Array.from({ length: Math.ceil(testimonials.length / 3) }).map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentIndex(index)}
-              className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                index === currentIndex ? 'bg-blue-500 scale-125' : 'bg-gray-600'
-              }`}
-            />
-          ))}
-        </div>
+        {!loading && testimonials.length > 3 && (
+          <div className="flex justify-center mt-8 space-x-2">
+            {Array.from({ length: Math.ceil(testimonials.length / 3) }).map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentIndex(index)}
+                className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                  index === currentIndex ? 'bg-blue-500 scale-125' : 'bg-gray-600'
+                }`}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Stats Section */}
         <div className="mt-20 grid grid-cols-1 md:grid-cols-4 gap-8 text-center">

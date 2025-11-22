@@ -144,6 +144,43 @@ h1, h2, h3, h4, h5, h6 {
   background-clip: text;
 }
 
+/* Video Player Styles */
+.video-container {
+  position: relative;
+  width: 100%;
+  height: 0;
+  padding-bottom: 56.25%; /* 16:9 aspect ratio */
+}
+
+.video-container iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.video-responsive {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  height: auto;
+}
+
+/* Ensure proper video scaling */
+.youtube-player {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Video player loading states */
+.video-loading {
+  @apply animate-pulse bg-gray-800;
+}
+
+.video-error {
+  @apply bg-red-900 text-red-300 flex items-center justify-center p-8 rounded-lg;
+}
+
 /* Mobile responsiveness helpers */
 @media (max-width: 768px) {
   .mobile-center {
@@ -152,5 +189,17 @@ h1, h2, h3, h4, h5, h6 {
   
   .mobile-full {
     @apply w-full;
+  }
+  
+  /* Adjust video player for mobile */
+  .video-container {
+    padding-bottom: 60%; /* Slightly taller for mobile */
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .video-container {
+    padding-bottom: 56.25%; /* Standard 16:9 */
   }
 }

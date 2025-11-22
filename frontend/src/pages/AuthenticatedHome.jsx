@@ -34,72 +34,118 @@ const AuthenticatedHome = () => {
     { name: 'Music', icon: '🎵', color: 'cyan', courses: 123 }
   ];
 
-  const reviews = [
-    {
-      id: 1,
-      name: 'Sarah Johnson',
-      role: 'Software Developer',
-      image: null,
-      rating: 5,
-      text: 'NexEd has completely transformed my career. The courses are top-notch and the instructors are industry experts!',
-      date: '2 weeks ago'
-    },
-    {
-      id: 2,
-      name: 'Michael Chen',
-      role: 'Product Manager',
-      image: null,
-      rating: 5,
-      text: 'Best online learning platform I\'ve used. The course quality and platform experience are unmatched.',
-      date: '1 month ago'
-    },
-    {
-      id: 3,
-      name: 'Emily Rodriguez',
-      role: 'UI/UX Designer',
-      image: null,
-      rating: 5,
-      text: 'The design courses here are fantastic! I\'ve learned so much and already applying it in my work.',
-      date: '3 weeks ago'
-    },
-    {
-      id: 4,
-      name: 'James Wilson',
-      role: 'Data Analyst',
-      image: null,
-      rating: 5,
-      text: 'Incredible value for money. The instructors are responsive and the community is supportive.',
-      date: '1 week ago'
-    }
-  ];
+  // State for real feedback data
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+
+  const [featuredCourses, setFeaturedCourses] = useState([]);
+  const [popularCourses, setPopularCourses] = useState([]);
+  const [trendingCourses, setTrendingCourses] = useState([]);
 
   useEffect(() => {
-    // Fetch courses from API
-    fetchCourses();
+    // Fetch different types of courses
+    fetchAllCourseTypes();
   }, []);
 
-  const fetchCourses = async () => {
+  const fetchAllCourseTypes = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/courses');
-      const data = await response.json();
-      // Ensure data is an array
-      if (Array.isArray(data)) {
-        setCourses(data);
-      } else if (data && Array.isArray(data.courses)) {
-        setCourses(data.courses);
-      } else {
-        setCourses([]);
+      setLoading(true);
+      
+      // Fetch featured, popular, and trending courses in parallel
+      const [featuredRes, popularRes, trendingRes, feedbackRes] = await Promise.all([
+        fetch('http://localhost:5000/api/courses/featured?limit=6'),
+        fetch('http://localhost:5000/api/courses/popular?limit=6'),
+        fetch('http://localhost:5000/api/courses/trending?limit=6'),
+        fetch('http://localhost:5000/api/feedback/public?limit=4&type=website_experience')
+      ]);
+
+      const [featuredData, popularData, trendingData, feedbackData] = await Promise.all([
+        featuredRes.json(),
+        popularRes.json(),
+        trendingRes.json(),
+        feedbackRes.json()
+      ]);
+
+      if (featuredData.success) {
+        // Handle nested response structure: data.data.courses or data.data
+        if (Array.isArray(featuredData.data.courses)) {
+          setFeaturedCourses(featuredData.data.courses);
+        } else if (Array.isArray(featuredData.data)) {
+          setFeaturedCourses(featuredData.data);
+        } else {
+          setFeaturedCourses([]);
+        }
       }
+      if (popularData.success) {
+        if (Array.isArray(popularData.data.courses)) {
+          setPopularCourses(popularData.data.courses);
+        } else if (Array.isArray(popularData.data)) {
+          setPopularCourses(popularData.data);
+        } else {
+          setPopularCourses([]);
+        }
+      }
+      if (trendingData.success) {
+        if (Array.isArray(trendingData.data.courses)) {
+          setTrendingCourses(trendingData.data.courses);
+        } else if (Array.isArray(trendingData.data)) {
+          setTrendingCourses(trendingData.data);
+        } else {
+          setTrendingCourses([]);
+        }
+      }
+
+      // Handle feedback data
+      if (feedbackData.success && feedbackData.data.feedback) {
+        // Transform API feedback format to match component expectations
+        const transformedReviews = feedbackData.data.feedback.map(feedback => ({
+          id: feedback._id,
+          name: feedback.name,
+          role: 'NexEd Student', // Default role since feedback doesn't have specific roles
+          image: null,
+          rating: feedback.rating,
+          text: feedback.message,
+          title: feedback.title,
+          date: new Date(feedback.createdAt).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })
+        }));
+        setReviews(transformedReviews);
+      } else {
+        // Fallback to default message when no reviews are available
+        setReviews([{
+          id: 'default',
+          name: 'NexEd Team',
+          role: 'Platform Team',
+          image: null,
+          rating: 5,
+          text: 'Be the first to share your experience! Click "Share Feedback" in the footer to leave a review.',
+          title: 'Share Your Experience',
+          date: 'Today'
+        }]);
+      }
+      setReviewsLoading(false);
+
+      // For backward compatibility, combine all courses
+      const allCourses = [
+        ...(featuredData.data || []),
+        ...(popularData.data || []),
+        ...(trendingData.data || [])
+      ];
+      setCourses(allCourses);
+      
     } catch (error) {
       console.error('Error fetching courses:', error);
       setCourses([]);
+      setFeaturedCourses([]);
+      setPopularCourses([]);
+      setTrendingCourses([]);
     } finally {
       setLoading(false);
     }
   };
-
-  const featuredCourses = Array.isArray(courses) ? courses.slice(0, 6) : [];
-  const popularCourses = Array.isArray(courses) ? courses.slice(6, 12) : [];
 
   const getColorClasses = (color) => {
     const colors = {
@@ -117,7 +163,7 @@ const AuthenticatedHome = () => {
     return colors[color] || colors.blue;
   };
 
-  const CourseCard = ({ course, featured = false }) => (
+  const CourseCard = ({ course, featured = false, popular = false, trending = false }) => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -131,10 +177,32 @@ const AuthenticatedHome = () => {
           alt={course.title}
           className="w-full h-full object-cover"
         />
-        {featured && (
-          <div className="absolute top-3 right-3 px-3 py-1 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs font-bold rounded-full flex items-center gap-1">
-            <StarIcon className="h-3 w-3" />
-            Featured
+        {(featured || popular || trending) && (
+          <div className={`absolute top-3 right-3 px-3 py-1 text-white text-xs font-bold rounded-full flex items-center gap-1 ${
+            featured 
+              ? 'bg-gradient-to-r from-yellow-500 to-orange-500'
+              : popular
+              ? 'bg-gradient-to-r from-red-500 to-pink-500'
+              : 'bg-gradient-to-r from-green-500 to-emerald-500'
+          }`}>
+            {featured && (
+              <>
+                <StarIcon className="h-3 w-3" />
+                Featured
+              </>
+            )}
+            {popular && (
+              <>
+                <FireIcon className="h-3 w-3" />
+                Popular
+              </>
+            )}
+            {trending && (
+              <>
+                <ArrowRightIcon className="h-3 w-3" />
+                Trending
+              </>
+            )}
           </div>
         )}
         <div className="absolute bottom-3 left-3 px-3 py-1 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold rounded-full">
@@ -267,7 +335,7 @@ const AuthenticatedHome = () => {
                 Featured Courses
               </h2>
               <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                Handpicked courses by our experts
+                Intelligently curated by our AI system - top quality guaranteed
               </p>
             </div>
           </div>
@@ -289,13 +357,13 @@ const AuthenticatedHome = () => {
       {/* Popular Courses Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="flex items-center gap-3 mb-8">
-          <FireIcon className="h-8 w-8 text-orange-500" />
+          <FireIcon className="h-8 w-8 text-red-500" />
           <div>
             <h2 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
               Popular Courses
             </h2>
             <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              Most loved by our students
+              Most loved by our students - powered by advanced popularity algorithms
             </p>
           </div>
         </div>
@@ -307,11 +375,45 @@ const AuthenticatedHome = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {popularCourses.map((course) => (
-              <CourseCard key={course._id} course={course} />
+              <CourseCard key={course._id} course={course} popular={true} />
             ))}
           </div>
         )}
       </div>
+
+      {/* Trending Courses Section */}
+      {trendingCourses.length > 0 && (
+        <div className={`py-16 ${isDarkMode ? 'bg-gray-800/50' : 'bg-gradient-to-br from-green-50 to-emerald-50'}`}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="relative">
+                <ArrowRightIcon className="h-8 w-8 text-green-500 transform rotate-45" />
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+              </div>
+              <div>
+                <h2 className={`text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  Trending Now
+                </h2>
+                <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Hot courses gaining momentum - discover what's new and exciting
+                </p>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {trendingCourses.map((course) => (
+                  <CourseCard key={course._id} course={course} trending={true} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Reviews Section */}
       <div className={`py-16 ${isDarkMode ? 'bg-gray-800/50' : 'bg-gradient-to-br from-blue-50 to-purple-50'}`}>
@@ -325,17 +427,36 @@ const AuthenticatedHome = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {reviews.map((review, index) => (
-              <motion.div
-                key={review.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className={`p-6 rounded-2xl shadow-lg ${
+          {reviewsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className={`p-6 rounded-2xl shadow-lg animate-pulse ${
                   isDarkMode ? 'bg-gray-800' : 'bg-white'
-                }`}
-              >
+                }`}>
+                  <div className={`h-4 rounded mb-3 ${
+                    isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
+                  }`} />
+                  <div className={`h-16 rounded mb-3 ${
+                    isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
+                  }`} />
+                  <div className={`h-4 rounded w-2/3 ${
+                    isDarkMode ? 'bg-gray-700' : 'bg-gray-200'
+                  }`} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {reviews.map((review, index) => (
+                <motion.div
+                  key={review.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className={`p-6 rounded-2xl shadow-lg ${
+                    isDarkMode ? 'bg-gray-800' : 'bg-white'
+                  }`}
+                >
                 <div className="flex items-center gap-3 mb-4">
                   <div className={`h-12 w-12 rounded-full flex items-center justify-center font-bold text-white ${
                     index % 4 === 0 ? 'bg-gradient-to-br from-blue-500 to-purple-600' :
@@ -359,14 +480,23 @@ const AuthenticatedHome = () => {
                   ))}
                 </div>
 
+                {review.title && (
+                  <h4 className={`text-sm font-semibold mb-2 ${
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    {review.title}
+                  </h4>
+                )}
+                
                 <p className={`text-sm mb-3 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   "{review.text}"
                 </p>
 
                 <p className="text-xs text-gray-500">{review.date}</p>
-              </motion.div>
-            ))}
-          </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

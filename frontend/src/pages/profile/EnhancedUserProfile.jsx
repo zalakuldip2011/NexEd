@@ -27,9 +27,8 @@ import {
   ArrowLeftIcon
 } from '@heroicons/react/24/outline';
 import axios from 'axios';
+import api from '../../services/api';
 import InterestsModal from '../../components/common/InterestsModal';
-
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const EnhancedUserProfile = () => {
   const { user, updateUser, logout } = useAuth();
@@ -152,17 +151,16 @@ const EnhancedUserProfile = () => {
       const token = localStorage.getItem('token');
       
       console.log('🖼️  Uploading avatar...');
-      console.log('   File:', selectedFile.name, selectedFile.size, 'bytes');
+      console.log('   File:', selectedFile.name, selectedFile.size, 'bytes', selectedFile.type);
       console.log('   Token:', token ? 'Present' : 'Missing');
+      console.log('   URL:', '/auth/upload-avatar');
       
-      const response = await axios.post(`${API_URL}/auth/upload-avatar`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${token}`
-        }
+      // DO NOT set Content-Type manually - browser sets it with boundary
+      const response = await api.post('/auth/upload-avatar', formData, {
+        timeout: 30000
       });
 
-      console.log('   Response:', response.data);
+      console.log('   ✅ Response:', response.data);
 
       if (response.data.success) {
         success('Profile photo updated successfully!');
@@ -177,14 +175,17 @@ const EnhancedUserProfile = () => {
         updateUser(updatedUser);
         setSelectedFile(null);
         setPreviewUrl(null);
-        console.log('   ✅ Avatar updated in state');
       } else {
         error(response.data.message || 'Failed to upload photo');
       }
     } catch (err) {
       console.error('❌ Avatar upload error:', err);
-      console.error('   Response:', err.response?.data);
-      error(err.response?.data?.message || 'Failed to upload photo');
+      console.error('   Status:', err.response?.status);
+      console.error('   Data:', err.response?.data);
+      console.error('   Message:', err.message);
+      
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to upload photo';
+      error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -194,15 +195,10 @@ const EnhancedUserProfile = () => {
   const handleRemoveAvatar = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       
       console.log('🗑️  Removing avatar...');
       
-      const response = await axios.delete(`${API_URL}/auth/remove-avatar`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await api.delete('/auth/remove-avatar');
 
       console.log('   Response:', response.data);
 
@@ -240,15 +236,11 @@ const EnhancedUserProfile = () => {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.put(
-        `${API_URL}/auth/update-name`,
+      const response = await api.put(
+        '/auth/update-name',
         {
           firstName: profileData.firstName,
           lastName: profileData.lastName
-        },
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
         }
       );
 
@@ -267,15 +259,11 @@ const EnhancedUserProfile = () => {
   const handleUpdateProfile = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.put(
-        `${API_URL}/auth/update-profile`,
+      const response = await api.put(
+        '/auth/update-profile',
         {
           'profile.bio': profileData.bio,
           'profile.phone': profileData.phone
-        },
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
         }
       );
 
@@ -294,13 +282,9 @@ const EnhancedUserProfile = () => {
   const handleRequestPasswordChange = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        `${API_URL}/auth/request-password-change`,
-        {},
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }
+      const response = await api.post(
+        '/auth/request-password-change',
+        {}
       );
 
       if (response.data.success) {
@@ -334,16 +318,12 @@ const EnhancedUserProfile = () => {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.put(
-        `${API_URL}/auth/change-password-with-otp`,
+      const response = await api.put(
+        '/auth/change-password-with-otp',
         {
           otp: passwordData.otp,
           newPassword: passwordData.newPassword,
           confirmPassword: passwordData.confirmPassword
-        },
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
         }
       );
 
@@ -379,15 +359,11 @@ const EnhancedUserProfile = () => {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const response = await axios.post(
-        `${API_URL}/auth/request-delete-account`,
+      const response = await api.post(
+        '/auth/request-delete-account',
         {
           password: deleteAccountData.password,
           reason: deleteAccountData.reason
-        },
-        {
-          headers: { 'Authorization': `Bearer ${token}` }
         }
       );
 

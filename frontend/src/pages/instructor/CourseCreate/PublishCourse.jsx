@@ -5,10 +5,12 @@ import {
   EyeIcon,
   GlobeAltIcon,
   TagIcon,
-  CurrencyDollarIcon,
+  BanknotesIcon,
   PhotoIcon,
-  XMarkIcon
+  XMarkIcon,
+  ChevronDownIcon
 } from '@heroicons/react/24/outline';
+import { COURSE_CATEGORIES, getSubdomains } from '../../../constants/categories';
 
 const PublishCourse = ({ data, updateData, onPrev, onSaveDraft, onPublish }) => {
   const [publishSettings, setPublishSettings] = useState({
@@ -28,6 +30,10 @@ const PublishCourse = ({ data, updateData, onPrev, onSaveDraft, onPublish }) => 
   const [thumbnailFile, setThumbnailFile] = useState(null);
   const [tagInput, setTagInput] = useState('');
   const [tags, setTags] = useState(Array.isArray(data?.tags) ? data.tags : []);
+  
+  // Category selection states
+  const [selectedDomain, setSelectedDomain] = useState(data?.category?.split(' > ')[0] || '');
+  const [selectedSubdomain, setSelectedSubdomain] = useState(data?.category?.split(' > ')[1] || '');
 
   // Auto-validate when data changes
   React.useEffect(() => {
@@ -199,6 +205,18 @@ const PublishCourse = ({ data, updateData, onPrev, onSaveDraft, onPublish }) => 
     });
   };
 
+  const handleDomainChange = (domain) => {
+    setSelectedDomain(domain);
+    setSelectedSubdomain(''); // Reset subdomain when domain changes
+    updateData({ category: domain }); // Just domain for now
+  };
+
+  const handleSubdomainChange = (subdomain) => {
+    setSelectedSubdomain(subdomain);
+    const fullCategory = selectedDomain && subdomain ? `${selectedDomain} > ${subdomain}` : selectedDomain;
+    updateData({ category: fullCategory });
+  };
+
   return (
     <div className="space-y-8">
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -322,26 +340,65 @@ const PublishCourse = ({ data, updateData, onPrev, onSaveDraft, onPublish }) => 
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Category *
                 </label>
-                <select
-                  value={data?.category || ''}
-                  onChange={(e) => updateData({ category: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                >
-                  <option value="">Select a category</option>
-                  <option value="Web Development">Web Development</option>
-                  <option value="Data Science">Data Science</option>
-                  <option value="Design">Design</option>
-                  <option value="Business">Business</option>
-                  <option value="Marketing">Marketing</option>
-                  <option value="Photography">Photography</option>
-                  <option value="Music">Music</option>
-                  <option value="Health & Fitness">Health & Fitness</option>
-                  <option value="Programming">Programming</option>
-                  <option value="Technology">Technology</option>
-                  <option value="Language">Language</option>
-                  <option value="Academic">Academic</option>
-                  <option value="Personal Development">Personal Development</option>
-                </select>
+                <div className="space-y-3">
+                  {/* Domain Selection */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Domain
+                    </label>
+                    <select
+                      value={selectedDomain}
+                      onChange={(e) => handleDomainChange(e.target.value)}
+                      className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                        selectedDomain 
+                          ? 'border-green-300 bg-green-50' 
+                          : 'border-gray-300'
+                      }`}
+                    >
+                      <option value="">Select a domain</option>
+                      {COURSE_CATEGORIES.map((category) => (
+                        <option key={category.domain} value={category.domain}>
+                          {category.domain}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Subdomain Selection */}
+                  {selectedDomain && (
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Subdomain (Optional)
+                      </label>
+                      <select
+                        value={selectedSubdomain}
+                        onChange={(e) => handleSubdomainChange(e.target.value)}
+                        className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+                          selectedSubdomain 
+                            ? 'border-green-300 bg-green-50' 
+                            : 'border-gray-300'
+                        }`}
+                      >
+                        <option value="">Select a subdomain (optional)</option>
+                        {getSubdomains(selectedDomain).map((subdomain) => (
+                          <option key={subdomain} value={subdomain}>
+                            {subdomain}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* Selected Category Display */}
+                  {selectedDomain && (
+                    <div className="flex items-center p-3 bg-purple-50 border border-purple-200 rounded-md">
+                      <TagIcon className="h-4 w-4 text-purple-600 mr-2" />
+                      <span className="text-sm font-medium text-purple-800">
+                        Selected: {selectedDomain}{selectedSubdomain ? ` > ${selectedSubdomain}` : ''}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Level */}
@@ -492,7 +549,7 @@ const PublishCourse = ({ data, updateData, onPrev, onSaveDraft, onPublish }) => 
                   Course Price
                 </label>
                 <div className="relative">
-                  <CurrencyDollarIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <BanknotesIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <input
                     type="number"
                     value={publishSettings.price}
@@ -513,13 +570,13 @@ const PublishCourse = ({ data, updateData, onPrev, onSaveDraft, onPublish }) => 
                       }
                     }}
                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    placeholder="0.00"
+                    placeholder="0"
                     min="0"
-                    step="0.01"
+                    step="1"
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  Set to $0 for a free course
+                  Set to ₹0 for a free course. Price in Indian Rupees (INR)
                 </p>
               </div>
 

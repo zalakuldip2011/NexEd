@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
-import axios from 'axios';
+import { useToast } from '../context/ToastContext';
+import { useWishlist } from '../context/WishlistContext';
+import { useCart } from '../context/CartContext';
 import { 
   HeartIcon, 
   ShoppingCartIcon, 
@@ -11,70 +13,40 @@ import {
 } from '@heroicons/react/24/outline';
 import { HeartIcon as HeartIconSolid } from '@heroicons/react/24/solid';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import Header from '../components/layout/Header';
 
 const Wishlist = () => {
   const { isDarkMode } = useTheme();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [wishlist, setWishlist] = useState(null);
+  const toast = useToast();
+  const { wishlistItems, removeFromWishlist, isLoading } = useWishlist();
+  const { addToCart } = useCart();
   const [removing, setRemoving] = useState({});
   const [addingToCart, setAddingToCart] = useState({});
 
-  useEffect(() => {
-    fetchWishlist();
-  }, []);
-
-  const fetchWishlist = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      const { data } = await axios.get(
-        `${process.env.REACT_APP_API_URL}/api/wishlist`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setWishlist(data.data.wishlist);
-    } catch (error) {
-      console.error('❌ Error fetching wishlist:', error);
-      if (error.response?.status === 401) {
-        navigate('/login');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const removeFromWishlist = async (courseId) => {
+  const handleRemoveFromWishlist = async (courseId) => {
     try {
       setRemoving(prev => ({ ...prev, [courseId]: true }));
-      const token = localStorage.getItem('token');
-      await axios.delete(
-        `${process.env.REACT_APP_API_URL}/api/wishlist/${courseId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      await fetchWishlist(); // Refresh wishlist
+      await removeFromWishlist(courseId);
+      toast.success('Removed from wishlist');
     } catch (error) {
       console.error('❌ Error removing from wishlist:', error);
-      alert('Failed to remove course from wishlist');
+      toast.error('Failed to remove course from wishlist');
     } finally {
       setRemoving(prev => ({ ...prev, [courseId]: false }));
     }
   };
 
-  const addToCart = async (courseId) => {
+  const handleAddToCart = async (courseId) => {
     try {
       setAddingToCart(prev => ({ ...prev, [courseId]: true }));
-      const token = localStorage.getItem('token');
-      await axios.post(
-        `${process.env.REACT_APP_API_URL}/api/cart/${courseId}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      alert('Course added to cart!');
+      await addToCart(courseId);
+      toast.success('Course added to cart!');
       // Optionally remove from wishlist after adding to cart
-      // await removeFromWishlist(courseId);
+      // await handleRemoveFromWishlist(courseId);
     } catch (error) {
       console.error('❌ Error adding to cart:', error);
-      alert(error.response?.data?.message || 'Failed to add to cart');
+      toast.error(error.message || 'Failed to add to cart');
     } finally {
       setAddingToCart(prev => ({ ...prev, [courseId]: false }));
     }
@@ -84,11 +56,15 @@ const Wishlist = () => {
     navigate(`/courses/${courseId}/enroll`);
   };
 
-  if (loading) {
-    return <LoadingSpinner />;
+  if (isLoading) {
+    return (
+      <>
+        <Header />
+        <LoadingSpinner />
+      </>
+    );
   }
 
-  const wishlistItems = wishlist?.items || [];
   const hasItems = wishlistItems.length > 0;
 
   return (
@@ -203,7 +179,7 @@ const Wishlist = () => {
                       
                       {!isFree && (
                         <span className="text-xl font-bold text-blue-500">
-                          ${course?.price}
+                          ₹{course?.price}
                         </span>
                       )}
                     </div>

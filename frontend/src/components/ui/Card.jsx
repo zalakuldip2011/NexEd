@@ -238,11 +238,11 @@ export const CourseCard = ({
         {/* Price */}
         <div className="flex items-center gap-2">
           <span className="text-2xl font-bold text-gray-900 dark:text-white">
-            ${price}
+            ₹{price}
           </span>
           {originalPrice && (
             <span className="text-sm text-gray-500 line-through">
-              ${originalPrice}
+              ₹{originalPrice}
             </span>
           )}
         </div>

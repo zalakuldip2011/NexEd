@@ -1,773 +1,549 @@
+const mongoose = require('mongoose');
 const Enrollment = require('../models/Enrollment');
 const Course = require('../models/Course');
-const Payment = require('../models/Payment');
+const User = require('../models/User');
+const NotificationService = require('../services/notificationService');
+const { asyncHandler, notFoundError, badRequestError } = require('../middleware/errorHandler');
 
 /**
- * @desc    Enroll student in a course
+ * @desc    Enroll in a course
  * @route   POST /api/enrollments
- * @access  Private (Student)
+ * @access  Private
  */
-exports.enrollCourse = async (req, res) => {
-  try {
-    const { courseId, paymentId } = req.body;
-    const studentId = req.user.id;
+const enrollCourse = asyncHandler(async (req, res) => {
+  const { courseId } = req.body;
+  const studentId = req.user.id;
 
-    // Validate required fields
-    if (!courseId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Course ID is required'
-      });
-    }
+  // Check if course exists
+  const course = await Course.findById(courseId);
+  if (!course) {
+    throw notFoundError('Course not found');
+  }
 
-    // Check if course exists and is published
-    const course = await Course.findById(courseId);
-    if (!course) {
-      return res.status(404).json({
-        success: false,
-        message: 'Course not found'
-      });
-    }
+  // Check if already enrolled
+  const existingEnrollment = await Enrollment.findOne({
+    student: studentId,
+    course: courseId
+  });
 
-    if (course.status !== 'published') {
-      return res.status(400).json({
-        success: false,
-        message: 'Course is not available for enrollment'
-      });
-    }
-
-    // Check if student is not the instructor
-    if (course.instructor.toString() === studentId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Instructors cannot enroll in their own courses'
-      });
-    }
-
-    // Check if already enrolled
-    const existingEnrollment = await Enrollment.findOne({
-      student: studentId,
-      course: courseId,
-      status: { $in: ['active', 'completed'] }
-    });
-    
-    if (existingEnrollment) {
-      return res.status(400).json({
-        success: false,
-        message: 'You are already enrolled in this course',
-        enrollment: existingEnrollment
-      });
-    }
-
-    // If course is free, create enrollment without payment
-    if (course.price === 0 || course.isFree) {
-      const enrollment = new Enrollment({
-        student: studentId,
-        course: courseId,
-        instructor: course.instructor,
-        enrolledAt: new Date()
-      });
-
-      await enrollment.save();
-
-      // Increment student count
-      course.studentCount = (course.studentCount || 0) + 1;
-      await course.save();
-
-      return res.status(201).json({
-        success: true,
-        message: 'Successfully enrolled in the course',
-        enrollment
-      });
-    }
-
-    // For paid courses, verify payment
-    if (!paymentId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Payment ID is required for paid courses'
-      });
-    }
-
-    const payment = await Payment.findById(paymentId);
-    if (!payment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Payment not found'
-      });
-    }
-
-    if (payment.status !== 'completed') {
-      return res.status(400).json({
-        success: false,
-        message: 'Payment must be completed before enrollment'
-      });
-    }
-
-    if (payment.student.toString() !== studentId || payment.course.toString() !== courseId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Payment does not match enrollment details'
-      });
-    }
-
-    // Create enrollment
-    const enrollment = new Enrollment({
-      student: studentId,
-      course: courseId,
-      instructor: course.instructor,
-      enrolledAt: new Date()
-    });
-
-    await enrollment.save();
-
-    // Increment student count
-    course.studentCount = (course.studentCount || 0) + 1;
-    await course.save();
-
-    res.status(201).json({
-      success: true,
-      message: 'Successfully enrolled in the course',
-      enrollment
-    });
-
-  } catch (error) {
-    console.error('Enroll course error:', error);
-    res.status(500).json({
+  if (existingEnrollment) {
+    return res.status(400).json({
       success: false,
-      message: 'Server error while enrolling in course',
-      error: error.message
+      message: 'Already enrolled in this course'
     });
   }
-};
 
-/**
- * @desc    Get all enrollments for current student
- * @route   GET /api/enrollments/my-courses
- * @access  Private (Student)
- */
-exports.getMyEnrollments = async (req, res) => {
+  // Create enrollment
+  const enrollment = await Enrollment.create({
+    student: studentId,
+    course: courseId,
+    instructor: course.instructor,
+    enrolledAt: new Date(),
+    status: 'active'
+  });
+
+  // Update course student count
+  await Course.findByIdAndUpdate(courseId, {
+    $inc: { studentCount: 1 }
+  });
+
+  await enrollment.populate('course', 'title description thumbnail');
+
+  // Create enrollment notification
   try {
-    const studentId = req.user.id;
-    const { status, sortBy = 'enrolledAt', order = 'desc' } = req.query;
-
-    const query = { student: studentId };
-    if (status) {
-      query.status = status;
-    }
-
-    const enrollments = await Enrollment.find(query)
-      .populate({
-        path: 'course',
-        select: 'title description thumbnail price category level duration studentCount rating'
-      })
-      .populate({
-        path: 'instructor',
-        select: 'username email profilePicture'
-      })
-      .sort({ [sortBy]: order === 'asc' ? 1 : -1 });
-
-    // Calculate additional statistics
-    const stats = {
-      total: enrollments.length,
-      active: enrollments.filter(e => e.status === 'active').length,
-      completed: enrollments.filter(e => e.status === 'completed').length,
-      totalProgress: enrollments.reduce((sum, e) => sum + e.progress, 0) / enrollments.length || 0,
-      certificatesEarned: enrollments.filter(e => e.certificate?.isIssued).length
-    };
-
-    res.json({
-      success: true,
-      count: enrollments.length,
-      stats,
-      enrollments
-    });
-
+    await NotificationService.createEnrollmentNotification(
+      studentId,
+      enrollment.course,
+      'paid'
+    );
   } catch (error) {
-    console.error('Get my enrollments error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while fetching enrollments',
-      error: error.message
-    });
+    console.error('Error creating enrollment notification:', error);
+    // Don't fail enrollment if notification fails
   }
-};
+
+  res.status(201).json({
+    success: true,
+    message: 'Successfully enrolled in course',
+    data: { enrollment }
+  });
+});
 
 /**
- * @desc    Get single enrollment details
+ * @desc    Get user's enrollments
+ * @route   GET /api/enrollments
+ * @access  Private
+ */
+const getMyEnrollments = asyncHandler(async (req, res) => {
+  const enrollments = await Enrollment.find({
+    student: req.user.id,
+    status: { $in: ['active', 'completed'] }
+  })
+  .populate('course', 'title description thumbnail category level duration studentCount totalLectures totalDuration averageRating')
+  .populate('instructor', 'username profile.firstName profile.lastName profile.avatar')
+  .sort({ 'progress.lastAccessedAt': -1, enrolledAt: -1 });
+
+  // Transform data to match frontend expectations
+  const transformedEnrollments = enrollments.map(enrollment => ({
+    _id: enrollment._id,
+    student: enrollment.student,
+    course: enrollment.course,
+    instructor: enrollment.instructor,
+    enrolledAt: enrollment.enrolledAt,
+    status: enrollment.status,
+    progress: enrollment.progress.percentage || 0,
+    lastAccessedAt: enrollment.progress.lastAccessedAt,
+    lastAccessedLecture: enrollment.progress.lastAccessedLecture,
+    totalWatchTime: enrollment.progress.totalWatchTime || 0,
+    completedLectures: enrollment.progress.completedLectures || [],
+    notes: enrollment.notes || [],
+    bookmarks: enrollment.bookmarks || [],
+    certificate: enrollment.certificate
+  }));
+
+  res.json({
+    success: true,
+    count: transformedEnrollments.length,
+    data: { enrollments: transformedEnrollments }
+  });
+});
+
+/**
+ * @desc    Get single enrollment
  * @route   GET /api/enrollments/:id
- * @access  Private (Student/Instructor)
+ * @access  Private
  */
-exports.getEnrollment = async (req, res) => {
-  try {
-    const enrollment = await Enrollment.findById(req.params.id)
-      .populate({
-        path: 'course',
-        populate: {
-          path: 'instructor',
-          select: 'username email profilePicture'
-        }
-      })
-      .populate({
-        path: 'student',
-        select: 'username email profilePicture'
-      });
+const getEnrollment = asyncHandler(async (req, res) => {
+  const enrollment = await Enrollment.findById(req.params.id)
+    .populate({
+      path: 'course',
+      populate: {
+        path: 'instructor',
+        select: 'username profile.firstName profile.lastName profile.avatar'
+      }
+    })
+    .populate('instructor', 'username profile.firstName profile.lastName profile.avatar');
 
-    if (!enrollment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Enrollment not found'
-      });
-    }
+  if (!enrollment) {
+    throw notFoundError('Enrollment not found');
+  }
 
-    // Check authorization (student or instructor)
-    if (
-      enrollment.student._id.toString() !== req.user.id &&
-      enrollment.instructor.toString() !== req.user.id
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to view this enrollment'
-      });
-    }
-
-    res.json({
-      success: true,
-      enrollment
-    });
-
-  } catch (error) {
-    console.error('Get enrollment error:', error);
-    res.status(500).json({
+  // Check if user owns this enrollment
+  if (enrollment.student.toString() !== req.user.id) {
+    return res.status(403).json({
       success: false,
-      message: 'Server error while fetching enrollment',
-      error: error.message
+      message: 'Not authorized to access this enrollment'
     });
   }
-};
+
+  // Transform enrollment data to match frontend expectations
+  const responseData = {
+    _id: enrollment._id,
+    student: enrollment.student,
+    course: enrollment.course,
+    instructor: enrollment.instructor,
+    enrolledAt: enrollment.enrolledAt,
+    status: enrollment.status,
+    progress: enrollment.progress || { percentage: 0, totalWatchTime: 0, completedLectures: [] },
+    lastAccessedAt: enrollment.progress?.lastAccessedAt,
+    lastAccessedLecture: enrollment.progress?.lastAccessedLecture,
+    totalWatchTime: enrollment.progress?.totalWatchTime || 0,
+    completedLectures: enrollment.progress?.completedLectures || [],
+    notes: enrollment.notes || [],
+    bookmarks: enrollment.bookmarks || [],
+    certificate: enrollment.certificate
+  };
+
+  res.json({
+    success: true,
+    data: { enrollment: responseData }
+  });
+});
 
 /**
- * @desc    Update enrollment progress
+ * @desc    Update course progress
  * @route   PUT /api/enrollments/:id/progress
- * @access  Private (Student)
+ * @access  Private
  */
-exports.updateProgress = async (req, res) => {
-  try {
-    const { lectureId, timeSpent, completed } = req.body;
+const updateProgress = asyncHandler(async (req, res) => {
+  const { progress, lectureId, timeSpent, completed } = req.body;
+  
+  const enrollment = await Enrollment.findById(req.params.id);
+  if (!enrollment) {
+    throw notFoundError('Enrollment not found');
+  }
 
-    const enrollment = await Enrollment.findById(req.params.id);
-
-    if (!enrollment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Enrollment not found'
-      });
-    }
-
-    // Check authorization
-    if (enrollment.student.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to update this enrollment'
-      });
-    }
-
-    // Update progress
-    const updatedEnrollment = await enrollment.updateProgress(lectureId, timeSpent, completed);
-
-    res.json({
-      success: true,
-      message: 'Progress updated successfully',
-      enrollment: updatedEnrollment
-    });
-
-  } catch (error) {
-    console.error('Update progress error:', error);
-    res.status(500).json({
+  // Check if user owns this enrollment
+  if (enrollment.student.toString() !== req.user.id) {
+    return res.status(403).json({
       success: false,
-      message: 'Server error while updating progress',
-      error: error.message
+      message: 'Not authorized to update this enrollment'
     });
   }
-};
+
+  // Update overall progress if provided
+  if (progress !== undefined) {
+    enrollment.progress.percentage = Math.min(100, Math.max(0, progress));
+    if (enrollment.progress.percentage === 100) {
+      enrollment.status = 'completed';
+    }
+  }
+
+  // Update lecture-specific progress if lectureId provided
+  if (lectureId) {
+    // Update last accessed lecture
+    enrollment.progress.lastAccessedLecture = lectureId;
+    enrollment.progress.lastAccessedAt = new Date();
+
+    // Update total watch time
+    if (timeSpent !== undefined) {
+      enrollment.progress.totalWatchTime = (enrollment.progress.totalWatchTime || 0) + timeSpent;
+    }
+  }
+
+  await enrollment.save();
+
+  // Transform response to match frontend expectations
+  const responseData = {
+    _id: enrollment._id,
+    student: enrollment.student,
+    course: enrollment.course,
+    progress: enrollment.progress.percentage || 0,
+    lastAccessedAt: enrollment.progress.lastAccessedAt,
+    lastAccessedLecture: enrollment.progress.lastAccessedLecture,
+    status: enrollment.status
+  };
+
+  res.json({
+    success: true,
+    message: 'Progress updated successfully',
+    data: { enrollment: responseData }
+  });
+});
 
 /**
  * @desc    Complete a lecture
  * @route   POST /api/enrollments/:id/complete-lecture
- * @access  Private (Student)
+ * @access  Private
  */
-exports.completeLecture = async (req, res) => {
-  try {
-    const { lectureId } = req.body;
+const completeLecture = asyncHandler(async (req, res) => {
+  const { lectureId, watchTime = 0 } = req.body;
+  
+  const enrollment = await Enrollment.findById(req.params.id);
+  if (!enrollment) {
+    throw notFoundError('Enrollment not found');
+  }
 
-    if (!lectureId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Lecture ID is required'
-      });
-    }
-
-    const enrollment = await Enrollment.findById(req.params.id);
-
-    if (!enrollment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Enrollment not found'
-      });
-    }
-
-    // Check authorization
-    if (enrollment.student.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to update this enrollment'
-      });
-    }
-
-    // Complete lecture
-    const updatedEnrollment = await enrollment.completeLecture(lectureId);
-
-    res.json({
-      success: true,
-      message: 'Lecture completed successfully',
-      enrollment: updatedEnrollment,
-      progress: updatedEnrollment.progress
-    });
-
-  } catch (error) {
-    console.error('Complete lecture error:', error);
-    res.status(500).json({
+  // Check if user owns this enrollment
+  if (enrollment.student.toString() !== req.user.id) {
+    return res.status(403).json({
       success: false,
-      message: 'Server error while completing lecture',
-      error: error.message
+      message: 'Not authorized to update this enrollment'
     });
   }
-};
+
+  // Use the model method to complete lecture
+  await enrollment.completeLecture(lectureId, watchTime);
+  
+  // Update overall progress based on completed lectures
+  await enrollment.updateProgress(enrollment.course);
+
+  // Check if course is completed and create notification
+  if (enrollment.status === 'completed') {
+    try {
+      await enrollment.populate('course', 'title thumbnail');
+      await NotificationService.createCourseCompletionNotification(
+        enrollment.student,
+        enrollment.course,
+        enrollment.progress.percentage || 100
+      );
+    } catch (error) {
+      console.error('Error creating course completion notification:', error);
+    }
+  }
+
+  res.json({
+    success: true,
+    message: 'Lecture marked as completed',
+    data: { 
+      enrollment: {
+        _id: enrollment._id,
+        progress: enrollment.progress.percentage || 0,
+        completedLectures: enrollment.progress.completedLectures,
+        status: enrollment.status
+      }
+    }
+  });
+});
 
 /**
- * @desc    Issue certificate for course completion
+ * @desc    Issue certificate
  * @route   POST /api/enrollments/:id/certificate
- * @access  Private (System/Instructor)
+ * @access  Private
  */
-exports.issueCertificate = async (req, res) => {
-  try {
-    const enrollment = await Enrollment.findById(req.params.id);
+const issueCertificate = asyncHandler(async (req, res) => {
+  const enrollment = await Enrollment.findById(req.params.id)
+    .populate('course', 'title')
+    .populate('student', 'username profile.firstName profile.lastName');
 
-    if (!enrollment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Enrollment not found'
-      });
-    }
+  if (!enrollment) {
+    throw notFoundError('Enrollment not found');
+  }
 
-    // Check authorization (instructor or system)
-    if (
-      req.user.role !== 'admin' &&
-      enrollment.instructor.toString() !== req.user.id
-    ) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to issue certificate'
-      });
-    }
-
-    // Check if course is completed
-    if (enrollment.progress < 100) {
-      return res.status(400).json({
-        success: false,
-        message: 'Certificate can only be issued after course completion'
-      });
-    }
-
-    // Check if certificate already issued
-    if (enrollment.certificate?.isIssued) {
-      return res.json({
-        success: true,
-        message: 'Certificate already issued',
-        certificate: enrollment.certificate
-      });
-    }
-
-    // Issue certificate
-    const updatedEnrollment = await enrollment.issueCertificate();
-
-    res.json({
-      success: true,
-      message: 'Certificate issued successfully',
-      certificate: updatedEnrollment.certificate
-    });
-
-  } catch (error) {
-    console.error('Issue certificate error:', error);
-    res.status(500).json({
+  // Check if course is completed
+  if (enrollment.status !== 'completed') {
+    return res.status(400).json({
       success: false,
-      message: 'Server error while issuing certificate',
-      error: error.message
+      message: 'Course must be completed to issue certificate'
     });
   }
-};
+
+  // Generate certificate (placeholder - implement actual certificate generation)
+  const certificate = {
+    id: `cert_${enrollment._id}`,
+    studentName: enrollment.student.profile?.firstName ? 
+      `${enrollment.student.profile.firstName} ${enrollment.student.profile.lastName}` : 
+      enrollment.student.username,
+    courseName: enrollment.course.title,
+    completedAt: enrollment.completedAt,
+    issuedAt: new Date()
+  };
+
+  res.json({
+    success: true,
+    message: 'Certificate issued successfully',
+    data: { certificate }
+  });
+});
 
 /**
  * @desc    Add note to enrollment
  * @route   POST /api/enrollments/:id/notes
- * @access  Private (Student)
+ * @access  Private
  */
-exports.addNote = async (req, res) => {
-  try {
-    const { lectureId, content } = req.body;
+const addNote = asyncHandler(async (req, res) => {
+  const { content, lectureId } = req.body;
+  
+  const enrollment = await Enrollment.findById(req.params.id);
+  if (!enrollment) {
+    throw notFoundError('Enrollment not found');
+  }
 
-    if (!lectureId || !content) {
-      return res.status(400).json({
-        success: false,
-        message: 'Lecture ID and content are required'
-      });
-    }
-
-    const enrollment = await Enrollment.findById(req.params.id);
-
-    if (!enrollment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Enrollment not found'
-      });
-    }
-
-    // Check authorization
-    if (enrollment.student.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to add notes to this enrollment'
-      });
-    }
-
-    // Add note
-    const updatedEnrollment = await enrollment.addNote(lectureId, content);
-
-    res.status(201).json({
-      success: true,
-      message: 'Note added successfully',
-      notes: updatedEnrollment.notes
-    });
-
-  } catch (error) {
-    console.error('Add note error:', error);
-    res.status(500).json({
+  // Check if user owns this enrollment
+  if (enrollment.student.toString() !== req.user.id) {
+    return res.status(403).json({
       success: false,
-      message: 'Server error while adding note',
-      error: error.message
+      message: 'Not authorized to add notes to this enrollment'
     });
   }
-};
+
+  const note = {
+    content,
+    lectureId,
+    createdAt: new Date()
+  };
+
+  enrollment.notes.push(note);
+  await enrollment.save();
+
+  res.status(201).json({
+    success: true,
+    message: 'Note added successfully',
+    notes: enrollment.notes,
+    data: { note }
+  });
+});
 
 /**
- * @desc    Update a note
+ * @desc    Update note
  * @route   PUT /api/enrollments/:id/notes/:noteId
- * @access  Private (Student)
+ * @access  Private
  */
-exports.updateNote = async (req, res) => {
-  try {
-    const { content } = req.body;
-    const { id, noteId } = req.params;
+const updateNote = asyncHandler(async (req, res) => {
+  const { content } = req.body;
+  
+  const enrollment = await Enrollment.findById(req.params.id);
+  if (!enrollment) {
+    throw notFoundError('Enrollment not found');
+  }
 
-    if (!content) {
-      return res.status(400).json({
-        success: false,
-        message: 'Content is required'
-      });
-    }
-
-    const enrollment = await Enrollment.findById(id);
-
-    if (!enrollment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Enrollment not found'
-      });
-    }
-
-    // Check authorization
-    if (enrollment.student.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to update notes in this enrollment'
-      });
-    }
-
-    // Find and update note
-    const note = enrollment.notes.id(noteId);
-    if (!note) {
-      return res.status(404).json({
-        success: false,
-        message: 'Note not found'
-      });
-    }
-
-    note.content = content;
-    note.updatedAt = new Date();
-
-    await enrollment.save();
-
-    res.json({
-      success: true,
-      message: 'Note updated successfully',
-      note
-    });
-
-  } catch (error) {
-    console.error('Update note error:', error);
-    res.status(500).json({
+  // Check if user owns this enrollment
+  if (enrollment.student.toString() !== req.user.id) {
+    return res.status(403).json({
       success: false,
-      message: 'Server error while updating note',
-      error: error.message
+      message: 'Not authorized to update notes in this enrollment'
     });
   }
-};
+
+  const note = enrollment.notes.id(req.params.noteId);
+  if (!note) {
+    throw notFoundError('Note not found');
+  }
+
+  note.content = content;
+  note.updatedAt = new Date();
+  await enrollment.save();
+
+  res.json({
+    success: true,
+    message: 'Note updated successfully',
+    data: { note }
+  });
+});
 
 /**
- * @desc    Delete a note
+ * @desc    Delete note
  * @route   DELETE /api/enrollments/:id/notes/:noteId
- * @access  Private (Student)
+ * @access  Private
  */
-exports.deleteNote = async (req, res) => {
-  try {
-    const { id, noteId } = req.params;
+const deleteNote = asyncHandler(async (req, res) => {
+  const enrollment = await Enrollment.findById(req.params.id);
+  if (!enrollment) {
+    throw notFoundError('Enrollment not found');
+  }
 
-    const enrollment = await Enrollment.findById(id);
-
-    if (!enrollment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Enrollment not found'
-      });
-    }
-
-    // Check authorization
-    if (enrollment.student.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to delete notes in this enrollment'
-      });
-    }
-
-    // Find and remove note
-    const note = enrollment.notes.id(noteId);
-    if (!note) {
-      return res.status(404).json({
-        success: false,
-        message: 'Note not found'
-      });
-    }
-
-    note.remove();
-    await enrollment.save();
-
-    res.json({
-      success: true,
-      message: 'Note deleted successfully'
-    });
-
-  } catch (error) {
-    console.error('Delete note error:', error);
-    res.status(500).json({
+  // Check if user owns this enrollment
+  if (enrollment.student.toString() !== req.user.id) {
+    return res.status(403).json({
       success: false,
-      message: 'Server error while deleting note',
-      error: error.message
+      message: 'Not authorized to delete notes from this enrollment'
     });
   }
-};
+
+  enrollment.notes.pull(req.params.noteId);
+  await enrollment.save();
+
+  res.json({
+    success: true,
+    message: 'Note deleted successfully'
+  });
+});
 
 /**
- * @desc    Add bookmark to enrollment
+ * @desc    Add bookmark
  * @route   POST /api/enrollments/:id/bookmarks
- * @access  Private (Student)
+ * @access  Private
  */
-exports.addBookmark = async (req, res) => {
-  try {
-    const { lectureId, timestamp, title } = req.body;
+const addBookmark = asyncHandler(async (req, res) => {
+  const { lectureId, title, timestamp } = req.body;
+  
+  const enrollment = await Enrollment.findById(req.params.id);
+  if (!enrollment) {
+    throw notFoundError('Enrollment not found');
+  }
 
-    if (!lectureId || timestamp === undefined) {
-      return res.status(400).json({
-        success: false,
-        message: 'Lecture ID and timestamp are required'
-      });
-    }
-
-    const enrollment = await Enrollment.findById(req.params.id);
-
-    if (!enrollment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Enrollment not found'
-      });
-    }
-
-    // Check authorization
-    if (enrollment.student.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to add bookmarks to this enrollment'
-      });
-    }
-
-    // Add bookmark
-    const updatedEnrollment = await enrollment.addBookmark(lectureId, timestamp, title);
-
-    res.status(201).json({
-      success: true,
-      message: 'Bookmark added successfully',
-      bookmarks: updatedEnrollment.bookmarks
-    });
-
-  } catch (error) {
-    console.error('Add bookmark error:', error);
-    res.status(500).json({
+  // Check if user owns this enrollment
+  if (enrollment.student.toString() !== req.user.id) {
+    return res.status(403).json({
       success: false,
-      message: 'Server error while adding bookmark',
-      error: error.message
+      message: 'Not authorized to add bookmarks to this enrollment'
     });
   }
-};
+
+  const bookmark = {
+    lectureId,
+    title,
+    timestamp,
+    createdAt: new Date()
+  };
+
+  enrollment.bookmarks.push(bookmark);
+  await enrollment.save();
+
+  res.status(201).json({
+    success: true,
+    message: 'Bookmark added successfully',
+    data: { bookmark }
+  });
+});
 
 /**
- * @desc    Delete a bookmark
+ * @desc    Delete bookmark
  * @route   DELETE /api/enrollments/:id/bookmarks/:bookmarkId
- * @access  Private (Student)
+ * @access  Private
  */
-exports.deleteBookmark = async (req, res) => {
-  try {
-    const { id, bookmarkId } = req.params;
+const deleteBookmark = asyncHandler(async (req, res) => {
+  const enrollment = await Enrollment.findById(req.params.id);
+  if (!enrollment) {
+    throw notFoundError('Enrollment not found');
+  }
 
-    const enrollment = await Enrollment.findById(id);
-
-    if (!enrollment) {
-      return res.status(404).json({
-        success: false,
-        message: 'Enrollment not found'
-      });
-    }
-
-    // Check authorization
-    if (enrollment.student.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to delete bookmarks in this enrollment'
-      });
-    }
-
-    // Find and remove bookmark
-    const bookmark = enrollment.bookmarks.id(bookmarkId);
-    if (!bookmark) {
-      return res.status(404).json({
-        success: false,
-        message: 'Bookmark not found'
-      });
-    }
-
-    bookmark.remove();
-    await enrollment.save();
-
-    res.json({
-      success: true,
-      message: 'Bookmark deleted successfully'
-    });
-
-  } catch (error) {
-    console.error('Delete bookmark error:', error);
-    res.status(500).json({
+  // Check if user owns this enrollment
+  if (enrollment.student.toString() !== req.user.id) {
+    return res.status(403).json({
       success: false,
-      message: 'Server error while deleting bookmark',
-      error: error.message
+      message: 'Not authorized to delete bookmarks from this enrollment'
     });
   }
-};
+
+  enrollment.bookmarks.pull(req.params.bookmarkId);
+  await enrollment.save();
+
+  res.json({
+    success: true,
+    message: 'Bookmark deleted successfully'
+  });
+});
 
 /**
- * @desc    Get course statistics (for instructors)
+ * @desc    Get course stats
  * @route   GET /api/enrollments/course/:courseId/stats
- * @access  Private (Instructor)
+ * @access  Private (Instructor only)
  */
-exports.getCourseStats = async (req, res) => {
-  try {
-    const { courseId } = req.params;
-
-    // Verify course exists and user is instructor
-    const course = await Course.findById(courseId);
-    if (!course) {
-      return res.status(404).json({
-        success: false,
-        message: 'Course not found'
-      });
+const getCourseStats = asyncHandler(async (req, res) => {
+  const { courseId } = req.params;
+  
+  const stats = await Enrollment.aggregate([
+    { $match: { course: new mongoose.Types.ObjectId(courseId) } },
+    {
+      $group: {
+        _id: null,
+        totalEnrollments: { $sum: 1 },
+        completedEnrollments: {
+          $sum: { $cond: [{ $eq: ['$status', 'completed'] }, 1, 0] }
+        },
+        averageProgress: { $avg: '$progress' }
+      }
     }
+  ]);
 
-    if (course.instructor.toString() !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Not authorized to view course statistics'
-      });
-    }
-
-    const stats = await Enrollment.getCourseStats(courseId);
-
-    res.json({
-      success: true,
-      stats
-    });
-
-  } catch (error) {
-    console.error('Get course stats error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while fetching course statistics',
-      error: error.message
-    });
-  }
-};
+  res.json({
+    success: true,
+    data: { stats: stats[0] || { totalEnrollments: 0, completedEnrollments: 0, averageProgress: 0 } }
+  });
+});
 
 /**
- * @desc    Get instructor's all enrollments
- * @route   GET /api/enrollments/instructor/students
- * @access  Private (Instructor)
+ * @desc    Get instructor's enrollments (courses they teach)
+ * @route   GET /api/enrollments/instructor
+ * @access  Private (Instructor only)
  */
-exports.getInstructorEnrollments = async (req, res) => {
-  try {
-    const instructorId = req.user.id;
-    const { status, courseId, sortBy = 'enrolledAt', order = 'desc' } = req.query;
+const getInstructorEnrollments = asyncHandler(async (req, res) => {
+  const enrollments = await Enrollment.find({
+    instructor: req.user.id
+  })
+  .populate('course', 'title description thumbnail')
+  .populate('student', 'username profile.firstName profile.lastName')
+  .sort({ enrolledAt: -1 });
 
-    const query = { instructor: instructorId };
-    if (status) query.status = status;
-    if (courseId) query.course = courseId;
+  res.json({
+    success: true,
+    count: enrollments.length,
+    data: { enrollments }
+  });
+});
 
-    const enrollments = await Enrollment.find(query)
-      .populate({
-        path: 'student',
-        select: 'username email profilePicture'
-      })
-      .populate({
-        path: 'course',
-        select: 'title thumbnail category'
-      })
-      .sort({ [sortBy]: order === 'asc' ? 1 : -1 });
-
-    const stats = {
-      total: enrollments.length,
-      active: enrollments.filter(e => e.status === 'active').length,
-      completed: enrollments.filter(e => e.status === 'completed').length,
-      averageProgress: enrollments.reduce((sum, e) => sum + e.progress, 0) / enrollments.length || 0
-    };
-
-    res.json({
-      success: true,
-      count: enrollments.length,
-      stats,
-      enrollments
-    });
-
-  } catch (error) {
-    console.error('Get instructor enrollments error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error while fetching enrollments',
-      error: error.message
-    });
-  }
+module.exports = {
+  enrollCourse,
+  getMyEnrollments,
+  getEnrollment,
+  updateProgress,
+  completeLecture,
+  issueCertificate,
+  addNote,
+  updateNote,
+  deleteNote,
+  addBookmark,
+  deleteBookmark,
+  getCourseStats,
+  getInstructorEnrollments
 };

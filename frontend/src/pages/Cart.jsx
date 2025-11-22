@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import axios from 'axios';
+import { useToast } from '../context/ToastContext';
+import { useCart } from '../context/CartContext';
+import { openRazorpayCheckout, formatAmount } from '../utils/razorpay';
+import paymentService from '../services/paymentService';
 import { 
   ShoppingCartIcon, 
   CreditCardIcon, 
@@ -11,84 +15,151 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import Header from '../components/layout/Header';
 
 const Cart = () => {
   const { isDarkMode } = useTheme();
+  const { user } = useAuth();
+  const toast = useToast();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [cart, setCart] = useState(null);
+  const { cartItems, removeFromCart, clearCart, isLoading, getCartTotal } = useCart();
   const [removing, setRemoving] = useState({});
   const [clearing, setClearing] = useState(false);
+  const [checkingOut, setCheckingOut] = useState(false);
 
-  useEffect(() => {
-    fetchCart();
-  }, []);
-
-  const fetchCart = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-      const { data } = await axios.get(
-        `${process.env.REACT_APP_API_URL}/api/cart`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setCart(data.data.cart);
-    } catch (error) {
-      console.error('❌ Error fetching cart:', error);
-      if (error.response?.status === 401) {
-        navigate('/login');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const removeFromCart = async (courseId) => {
+  const handleRemoveFromCart = async (courseId) => {
     try {
       setRemoving(prev => ({ ...prev, [courseId]: true }));
-      const token = localStorage.getItem('token');
-      await axios.delete(
-        `${process.env.REACT_APP_API_URL}/api/cart/${courseId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      await fetchCart(); // Refresh cart
+      await removeFromCart(courseId);
+      toast.success('Removed from cart');
     } catch (error) {
       console.error('❌ Error removing from cart:', error);
-      alert('Failed to remove course from cart');
+      toast.error('Failed to remove course from cart');
     } finally {
       setRemoving(prev => ({ ...prev, [courseId]: false }));
     }
   };
 
-  const clearCart = async () => {
+  const handleClearCart = async () => {
     if (!window.confirm('Are you sure you want to clear your entire cart?')) return;
     
     try {
       setClearing(true);
-      const token = localStorage.getItem('token');
-      await axios.delete(
-        `${process.env.REACT_APP_API_URL}/api/cart`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      await fetchCart(); // Refresh cart
+      await clearCart();
+      toast.success('Cart cleared successfully');
     } catch (error) {
       console.error('❌ Error clearing cart:', error);
-      alert('Failed to clear cart');
+      toast.error('Failed to clear cart');
     } finally {
       setClearing(false);
     }
   };
 
-  const handleCheckout = () => {
-    // TODO: Navigate to checkout page
-    alert('Checkout functionality coming soon!');
+  const handleCheckout = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      toast.error('Your cart is empty');
+      return;
+    }
+
+    try {
+      setCheckingOut(true);
+      toast.info('Creating payment order...');
+
+      // Get all course IDs from cart
+      const courseIds = cartItems.map(item => item.course?._id || item.course);
+
+      // Step 1: Create Razorpay order for all courses
+      const orderResponse = await paymentService.createOrder({ courseIds });
+      
+      if (!orderResponse.success) {
+        throw new Error(orderResponse.message || 'Failed to create order');
+      }
+
+      // Handle free courses
+      if (orderResponse.isFree) {
+        toast.success('Successfully enrolled in free courses!');
+        await clearCart();
+        navigate('/my-learning');
+        return;
+      }
+
+      const { order, razorpayKeyId, courseDetails, totalAmount } = orderResponse;
+
+      // Step 2: Open Razorpay checkout
+      const paymentResult = await openRazorpayCheckout({
+        keyId: razorpayKeyId,
+        orderId: order.orderId,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'NexEd',
+        description: `Purchase of ${courseIds.length} course(s)`,
+        image: '/logo192.png',
+        prefill: {
+          name: user.username || user.email?.split('@')[0],
+          email: user.email,
+          contact: user.phone || ''
+        },
+        theme: {
+          color: isDarkMode ? '#6366f1' : '#3b82f6'
+        },
+        notes: {
+          courseIds: JSON.stringify(courseIds),
+          courseCount: courseIds.length,
+          userId: user.id
+        }
+      });
+
+      // Step 3: Verify payment on backend
+      toast.info('Verifying payment...');
+      
+      const verifyResponse = await paymentService.verifyPayment({
+        razorpay_order_id: paymentResult.razorpay_order_id,
+        razorpay_payment_id: paymentResult.razorpay_payment_id,
+        razorpay_signature: paymentResult.razorpay_signature,
+        courseIds: courseIds
+      });
+
+      if (verifyResponse.success && verifyResponse.verified) {
+        toast.success(`Payment successful! Enrolled in ${courseIds.length} course(s).`);
+        
+        // Clear cart after successful enrollment
+        await clearCart();
+        
+        // Redirect to My Learning page
+        setTimeout(() => {
+          navigate('/my-learning');
+        }, 1500);
+      } else {
+        throw new Error('Payment verification failed');
+      }
+
+    } catch (error) {
+      console.error('Checkout error:', error);
+      
+      if (error.message === 'Payment cancelled by user') {
+        toast.info('Payment cancelled');
+      } else {
+        toast.error(error.message || 'Checkout failed. Please try again.');
+      }
+    } finally {
+      setCheckingOut(false);
+    }
   };
 
-  if (loading) {
-    return <LoadingSpinner />;
+  if (isLoading) {
+    return (
+      <>
+        <Header />
+        <LoadingSpinner />
+      </>
+    );
   }
 
-  const cartItems = cart?.items || [];
   const hasItems = cartItems.length > 0;
 
   return (
@@ -121,7 +192,7 @@ const Cart = () => {
               {/* Clear Cart Button */}
               <div className="flex justify-end mb-4">
                 <button
-                  onClick={clearCart}
+                  onClick={handleClearCart}
                   disabled={clearing}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
                     isDarkMode
@@ -193,10 +264,10 @@ const Cart = () => {
                     {/* Price & Remove */}
                     <div className="flex flex-col items-end justify-between">
                       <span className="text-2xl font-bold text-blue-500">
-                        ${item.price}
+                        ₹{item.price}
                       </span>
                       <button
-                        onClick={() => removeFromCart(item.course?._id)}
+                        onClick={() => handleRemoveFromCart(item.course?._id)}
                         disabled={removing[item.course?._id]}
                         className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
                           isDarkMode
@@ -236,7 +307,7 @@ const Cart = () => {
                     <span className={`font-semibold ${
                       isDarkMode ? 'text-white' : 'text-gray-900'
                     }`}>
-                      ${cart?.totalPrice?.toFixed(2)}
+                      ₹{getCartTotal().toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -246,7 +317,7 @@ const Cart = () => {
                     <span className={`font-semibold ${
                       isDarkMode ? 'text-white' : 'text-gray-900'
                     }`}>
-                      $0.00
+                      ₹0.00
                     </span>
                   </div>
                   <div className={`border-t pt-4 ${
@@ -259,7 +330,7 @@ const Cart = () => {
                         Total
                       </span>
                       <span className="text-2xl font-bold text-blue-500">
-                        ${cart?.totalPrice?.toFixed(2)}
+                        ₹{getCartTotal().toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -267,10 +338,24 @@ const Cart = () => {
 
                 <button
                   onClick={handleCheckout}
-                  className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  disabled={checkingOut}
+                  className={`w-full py-4 rounded-xl font-semibold text-white transition-all duration-200 shadow-lg hover:shadow-xl ${
+                    checkingOut
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transform hover:scale-105'
+                  }`}
                 >
-                  <CreditCardIcon className="h-6 w-6 inline mr-2" />
-                  Proceed to Checkout
+                  {checkingOut ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent" />
+                      Processing...
+                    </span>
+                  ) : (
+                    <>
+                      <CreditCardIcon className="h-6 w-6 inline mr-2" />
+                      Proceed to Checkout
+                    </>
+                  )}
                 </button>
 
                 {/* Promo Code */}

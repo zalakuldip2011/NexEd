@@ -15,7 +15,7 @@ import {
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import LoadingSpinner from '../common/LoadingSpinner';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+import api from '../../services/api';
 
 const PersonalizedCoursesSection = () => {
   const { isDarkMode } = useTheme();
@@ -26,22 +26,42 @@ const PersonalizedCoursesSection = () => {
   const [wishlistItems, setWishlistItems] = useState(new Set());
   const [actionLoading, setActionLoading] = useState({});
 
+  const [recommendationBreakdown, setRecommendationBreakdown] = useState(null);
+
   useEffect(() => {
     if (isAuthenticated && user) {
-      fetchPersonalizedCourses();
+      fetchSmartRecommendations();
       fetchWishlist();
     }
   }, [isAuthenticated, user]);
 
-  const fetchPersonalizedCourses = async () => {
+  const fetchSmartRecommendations = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
       
-      const response = await axios.get(`${API_URL}/courses/personalized`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+      const response = await api.get('/courses/smart-recommendations', {
+        params: {
+          limit: 12
+        }
+      });
+
+      if (response.data.success) {
+        setCourses(response.data.data.courses);
+        setHasInterests(response.data.data.hasInterests);
+        setRecommendationBreakdown(response.data.data.breakdown);
+      }
+    } catch (error) {
+      console.error('Error fetching smart recommendations:', error);
+      // Fallback to personalized courses
+      fetchPersonalizedCourses();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPersonalizedCourses = async () => {
+    try {
+      const response = await api.get('/courses/personalized', {
         params: {
           limit: 8
         }
@@ -53,17 +73,12 @@ const PersonalizedCoursesSection = () => {
       }
     } catch (error) {
       console.error('Error fetching personalized courses:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
   const fetchWishlist = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/wishlist`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await api.get('/wishlist');
       
       if (response.data.success) {
         const courseIds = new Set(response.data.data.wishlist.items.map(item => item.course._id || item.course));
@@ -81,22 +96,17 @@ const PersonalizedCoursesSection = () => {
     setActionLoading(prev => ({ ...prev, [`wishlist-${courseId}`]: true }));
     
     try {
-      const token = localStorage.getItem('token');
       const isInWishlist = wishlistItems.has(courseId);
       
       if (isInWishlist) {
-        await axios.delete(`${API_URL}/wishlist/${courseId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        await api.delete(`/wishlist/${courseId}`);
         setWishlistItems(prev => {
           const newSet = new Set(prev);
           newSet.delete(courseId);
           return newSet;
         });
       } else {
-        await axios.post(`${API_URL}/wishlist/${courseId}`, {}, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        await api.post(`/wishlist/${courseId}`, {});
         setWishlistItems(prev => new Set([...prev, courseId]));
       }
     } catch (error) {
@@ -114,10 +124,7 @@ const PersonalizedCoursesSection = () => {
     setActionLoading(prev => ({ ...prev, [`cart-${courseId}`]: true }));
     
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post(`${API_URL}/cart/${courseId}`, {}, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await api.post(`/cart/${courseId}`, {});
       
       if (response.data.success) {
         alert('Course added to cart!');
@@ -167,15 +174,46 @@ const PersonalizedCoursesSection = () => {
               <h2 className={`text-3xl md:text-4xl font-bold ${
                 isDarkMode ? 'text-white' : 'text-gray-900'
               }`}>
-                {hasInterests ? 'Recommended For You' : 'Popular Courses'}
+                {hasInterests ? 'Smart Recommendations' : 'Curated For You'}
               </h2>
             </div>
-            <p className={`text-lg ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
-              {hasInterests 
-                ? 'Courses matched to your interests and learning goals'
-                : 'Explore our most popular courses'
-              }
-            </p>
+            <div className="space-y-2">
+              <p className={`text-lg ${isDarkMode ? 'text-slate-400' : 'text-gray-600'}`}>
+                {hasInterests 
+                  ? 'AI-powered course selection based on your profile and learning patterns'
+                  : 'Intelligently curated courses using advanced popularity algorithms'
+                }
+              </p>
+              {recommendationBreakdown && (
+                <div className={`flex flex-wrap gap-2 text-sm ${isDarkMode ? 'text-slate-500' : 'text-gray-500'}`}>
+                  {recommendationBreakdown.personalized > 0 && (
+                    <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded">
+                      {recommendationBreakdown.personalized} personalized
+                    </span>
+                  )}
+                  {recommendationBreakdown.featured > 0 && (
+                    <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded">
+                      {recommendationBreakdown.featured} featured
+                    </span>
+                  )}
+                  {recommendationBreakdown.popular > 0 && (
+                    <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded">
+                      {recommendationBreakdown.popular} popular
+                    </span>
+                  )}
+                  {recommendationBreakdown.trending > 0 && (
+                    <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded">
+                      {recommendationBreakdown.trending} trending
+                    </span>
+                  )}
+                  {recommendationBreakdown.nextCourses > 0 && (
+                    <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded">
+                      {recommendationBreakdown.nextCourses} learning path
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           <Link
             to="/courses"
@@ -307,7 +345,7 @@ const PersonalizedCoursesSection = () => {
                         <span className={`text-lg font-bold ${
                           isDarkMode ? 'text-purple-400' : 'text-purple-600'
                         }`}>
-                          ${course.price}
+                          ₹{course.price}
                         </span>
                       )}
                     </div>

@@ -1,11 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const {
-  createCheckoutSession,
-  verifyPayment,
   createPayment,
   confirmPayment,
-  handleStripeWebhook,
   handlePayPalWebhook,
   requestRefund,
   getPayment,
@@ -17,39 +14,18 @@ const {
 const { auth, requireRole } = require('../middleware/auth');
 
 /**
- * @route   POST /api/payments/checkout
- * @desc    Create Stripe Checkout Session
- * @access  Private (Student)
- */
-router.post('/checkout', auth, createCheckoutSession);
-
-/**
- * @route   POST /api/payments/verify
- * @desc    Verify payment after Stripe Checkout
- * @access  Private (Student)
- */
-router.post('/verify', auth, verifyPayment);
-
-/**
  * @route   POST /api/payments/create
  * @desc    Create a payment order for course enrollment
- * @access  Private (Student)
+ * @access  Private (Student/Instructor - anyone can purchase)
  */
-router.post('/create', auth, requireRole('student'), createPayment);
+router.post('/create', auth, createPayment);
 
 /**
  * @route   POST /api/payments/:id/confirm
  * @desc    Confirm payment and complete enrollment
- * @access  Private (Student)
+ * @access  Private (Student/Instructor - anyone can purchase)
  */
-router.post('/:id/confirm', auth, requireRole('student'), confirmPayment);
-
-/**
- * @route   POST /api/payments/webhook/stripe
- * @desc    Handle Stripe webhooks
- * @access  Public (Stripe only)
- */
-router.post('/webhook/stripe', express.raw({ type: 'application/json' }), handleStripeWebhook);
+router.post('/:id/confirm', auth, confirmPayment);
 
 /**
  * @route   POST /api/payments/webhook/paypal
@@ -61,9 +37,9 @@ router.post('/webhook/paypal', handlePayPalWebhook);
 /**
  * @route   GET /api/payments/my-payments
  * @desc    Get payment history for current user
- * @access  Private (Student)
+ * @access  Private (Student/Instructor - anyone can view their payments)
  */
-router.get('/my-payments', auth, requireRole('student'), getMyPayments);
+router.get('/my-payments', auth, getMyPayments);
 
 /**
  * @route   GET /api/payments/instructor/revenue
@@ -89,9 +65,9 @@ router.get('/:id', auth, getPayment);
 /**
  * @route   GET /api/payments/:id/receipt
  * @desc    Generate payment receipt
- * @access  Private (Student - owner only)
+ * @access  Private (Anyone who made the payment)
  */
-router.get('/:id/receipt', auth, requireRole('student'), generateReceipt);
+router.get('/:id/receipt', auth, generateReceipt);
 
 /**
  * @route   POST /api/payments/:id/refund

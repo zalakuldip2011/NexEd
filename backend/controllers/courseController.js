@@ -1,7 +1,13 @@
 const Course = require('../models/Course');
 const User = require('../models/User');
 const mongoose = require('mongoose');
-const { getPersonalizedCourses } = require('../services/recommendationService');
+const { 
+  getPersonalizedCourses, 
+  getFeaturedCourses,
+  getPopularCourses,
+  getTrendingCourses,
+  getSmartRecommendations
+} = require('../services/recommendationService');
 
 // Helper function to validate MongoDB ObjectId
 const isValidObjectId = (id) => {
@@ -93,28 +99,30 @@ const getCoursesByCategory = async (req, res) => {
   }
 };
 
-// Get featured courses
-const getFeaturedCourses = async (req, res) => {
+// Get featured courses (enhanced with recommendation service)
+const getFeaturedCoursesController = async (req, res) => {
   try {
-    const { limit = 8 } = req.query;
+    console.log('⭐ GET FEATURED COURSES');
+    
+    const limit = parseInt(req.query.limit) || 12;
+    const courses = await getFeaturedCourses(limit);
 
-    const courses = await Course.find({
-      isPublished: true,
-      featured: true
-    })
-    .populate('instructor', 'name profilePicture')
-    .sort({ averageRating: -1, totalEnrollments: -1 })
-    .limit(parseInt(limit));
+    console.log('   ✅ Returning', courses.length, 'featured courses');
 
     res.json({
       success: true,
-      data: courses
+      data: {
+        courses,
+        total: courses.length
+      }
     });
+
   } catch (error) {
-    console.error('Error fetching featured courses:', error);
+    console.error('❌ Error getting featured courses:', error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching featured courses'
+      message: 'Error fetching featured courses',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -1136,6 +1144,99 @@ module.exports = {
   getCourseAnalytics
 };
 
+// Get popular courses with advanced algorithm
+const getPopularCoursesController = async (req, res) => {
+  try {
+    console.log('🔥 GET POPULAR COURSES');
+    const { limit = 12 } = req.query;
+
+    const courses = await getPopularCourses(parseInt(limit));
+
+    console.log(`   ✅ Returning ${courses.length} popular courses`);
+
+    res.json({
+      success: true,
+      data: courses
+    });
+  } catch (error) {
+    console.error('❌ Error fetching popular courses:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching popular courses',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Get trending courses
+const getTrendingCoursesController = async (req, res) => {
+  try {
+    console.log('📈 GET TRENDING COURSES');
+    const { limit = 12 } = req.query;
+
+    const courses = await getTrendingCourses(parseInt(limit));
+
+    console.log(`   ✅ Returning ${courses.length} trending courses`);
+
+    res.json({
+      success: true,
+      data: courses
+    });
+  } catch (error) {
+    console.error('❌ Error fetching trending courses:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching trending courses',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Get smart recommendations mixing multiple algorithms
+const getSmartRecommendationsController = async (req, res) => {
+  try {
+    console.log('🧠 GET SMART RECOMMENDATIONS');
+    console.log('   User ID:', req.user?.id);
+
+    const limit = parseInt(req.query.limit) || 24;
+    
+    // Get full user with interests and enrollment history
+    const user = await User.findById(req.user.id)
+      .select('interests enrolledCourses')
+      .populate('enrolledCourses.course', 'category level');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    const recommendations = await getSmartRecommendations(user, limit);
+
+    console.log('   ✅ Returning', recommendations.courses.length, 'smart recommendations');
+    console.log('   Breakdown:', recommendations.breakdown);
+
+    res.json({
+      success: true,
+      data: {
+        courses: recommendations.courses,
+        breakdown: recommendations.breakdown,
+        hasInterests: user.interests?.hasCompletedInterests || false,
+        interestCategories: user.interests?.categories || []
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error getting smart recommendations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching smart recommendations',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 // Get personalized courses for user (requires authentication)
 const getPersonalizedCoursesForUser = async (req, res) => {
   try {
@@ -1172,7 +1273,135 @@ const getPersonalizedCoursesForUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching personalized courses',
-      error: error.message
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Get student performance for instructor's courses
+const getStudentPerformance = async (req, res) => {
+  try {
+    console.log('📊 GET STUDENT PERFORMANCE');
+    console.log('   Instructor ID:', req.user?.id);
+
+    if (!req.user?.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    const Enrollment = require('../models/Enrollment');
+    
+    // Get instructor's published courses
+    const instructorCourses = await Course.find({
+      instructor: req.user.id,
+      isPublished: true
+    }).select('_id title');
+
+    if (instructorCourses.length === 0) {
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+
+    const courseIds = instructorCourses.map(course => course._id);
+    
+    // Get enrollment data for instructor's courses
+    const enrollmentData = await Enrollment.aggregate([
+      {
+        $match: {
+          course: { $in: courseIds }
+        }
+      },
+      {
+        $group: {
+          _id: '$course',
+          totalStudents: { $sum: 1 },
+          completedStudents: {
+            $sum: {
+              $cond: [{ $gte: ['$progress.percentage', 100] }, 1, 0]
+            }
+          },
+          activeStudents: {
+            $sum: {
+              $cond: [
+                { 
+                  $and: [
+                    { $gt: ['$progress.percentage', 0] },
+                    { $lt: ['$progress.percentage', 100] }
+                  ]
+                }, 1, 0
+              ]
+            }
+          },
+          strugglingStudents: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $gt: ['$enrolledAt', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)] }, // Enrolled more than 30 days ago
+                    { $lt: ['$progress.percentage', 25] } // Less than 25% progress
+                  ]
+                }, 1, 0
+              ]
+            }
+          },
+          averageProgress: { $avg: '$progress.percentage' }
+        }
+      },
+      {
+        $lookup: {
+          from: 'courses',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'course'
+        }
+      },
+      {
+        $unwind: '$course'
+      },
+      {
+        $project: {
+          courseName: '$course.title',
+          courseId: '$_id',
+          totalStudents: 1,
+          completedStudents: 1,
+          activeStudents: 1,
+          strugglingStudents: 1,
+          averageProgress: { $round: ['$averageProgress', 1] },
+          completionRate: {
+            $round: [
+              {
+                $multiply: [
+                  { $divide: ['$completedStudents', '$totalStudents'] },
+                  100
+                ]
+              },
+              1
+            ]
+          }
+        }
+      },
+      {
+        $sort: { totalStudents: -1 }
+      }
+    ]);
+
+    console.log('   ✅ Found performance data for', enrollmentData.length, 'courses');
+
+    res.json({
+      success: true,
+      data: enrollmentData
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching student performance:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching student performance',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
@@ -1181,11 +1410,14 @@ module.exports = {
   // Public endpoints
   getCourses,
   getCoursesByCategory,
-  getFeaturedCourses,
+  getFeaturedCourses: getFeaturedCoursesController,
+  getPopularCourses: getPopularCoursesController,
+  getTrendingCourses: getTrendingCoursesController,
   getPopularTags,
   getCourseById,
   getCategories,
   getPersonalizedCoursesForUser,
+  getSmartRecommendations: getSmartRecommendationsController,
   
   // Instructor endpoints
   getInstructorCourses,
@@ -1196,5 +1428,6 @@ module.exports = {
   togglePublishCourse,
   deleteCourse,
   toggleCourseStatus,
-  getCourseAnalytics
+  getCourseAnalytics,
+  getStudentPerformance
 };

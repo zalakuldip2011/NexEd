@@ -10,7 +10,7 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 // Create axios instance with proper configuration
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: `${API_BASE_URL}/api`,
   timeout: 30000, // 30 seconds timeout
   withCredentials: true, // Send cookies with requests
   headers: {
@@ -58,22 +58,35 @@ api.interceptors.response.use(
     if (error.response) {
       const { status, data } = error.response;
       
-      // Log error in development
+      // Log error in development (but skip expected 401 on login endpoint)
       if (process.env.NODE_ENV === 'development') {
-        console.error(`❌ API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url}`, status, data);
+        const isLoginEndpoint = error.config?.url?.includes('/auth/login');
+        const is401 = status === 401;
+        
+        // Only log 401 on login as a warning (expected for wrong password)
+        if (isLoginEndpoint && is401) {
+          console.warn(`⚠️ Login failed: Invalid credentials`);
+        } else {
+          console.error(`❌ API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url}`, status, data);
+        }
       }
       
       // Handle authentication errors
       if (status === 401) {
-        // Token expired or invalid
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        // For login endpoint, don't clear tokens (it's an expected error)
+        const isLoginEndpoint = error.config?.url?.includes('/auth/login');
         
-        // Only redirect if not already on login/signup pages
-        const currentPath = window.location.pathname;
-        if (!currentPath.includes('/login') && !currentPath.includes('/signup')) {
-          // Dispatch custom event for auth context to handle
-          window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+        if (!isLoginEndpoint) {
+          // Token expired or invalid on other endpoints
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          
+          // Only redirect if not already on login/signup pages
+          const currentPath = window.location.pathname;
+          if (!currentPath.includes('/login') && !currentPath.includes('/signup')) {
+            // Dispatch custom event for auth context to handle
+            window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+          }
         }
       }
       
